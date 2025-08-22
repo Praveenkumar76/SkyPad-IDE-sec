@@ -42,6 +42,12 @@ connectToDatabase().then(() => {
     // eslint-disable-next-line no-console
     console.log(`Backend listening on http://localhost:${PORT}`);
   });
+}).catch((error) => {
+  console.warn('Database connection failed, but starting server anyway:', error.message);
+  app.listen(PORT, () => {
+    // eslint-disable-next-line no-console
+    console.log(`Backend listening on http://localhost:${PORT} (without database)`);
+  });
 });
 
 

@@ -16,8 +16,9 @@ async function connectToDatabase() {
     console.log('[MongoDB] Connected');
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[MongoDB] Connection error:', err.message);
-    process.exit(1);
+    console.warn('[MongoDB] Connection failed, but continuing without database:', err.message);
+    console.warn('[MongoDB] Some features may not work properly without database connection.');
+    return;
   }
 }
 

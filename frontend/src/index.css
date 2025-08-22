@@ -1,0 +1,189 @@
+@import url('https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@100..900&family=Climate+Crisis&family=Zen+Dots&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  --font-zen: 'Zen Dots', sans-serif;
+  --font-climate: 'Climate Crisis', sans-serif;
+  --font-bitcount: 'Bitcount Prop Single', system-ui;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes watermarkPulse {
+  0%, 100% {
+    opacity: 0.05;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.12;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes buttonGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 #a78bfa44, 0 0 0 0 #a78bfa44;
+  }
+  50% {
+    box-shadow: 0 0 16px 4px #a78bfa88, 0 0 32px 8px #a78bfa44;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes cardFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes iconSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+.fade-in-up-delay-1 {
+  animation-delay: 0.2s;
+}
+.fade-in-up-delay-2 {
+  animation-delay: 0.4s;
+}
+.fade-in-up-delay-3 {
+  animation-delay: 0.6s;
+}
+
+.watermark-pulse {
+  animation: watermarkPulse 4s ease-in-out infinite;
+}
+
+.button-glow:hover {
+  animation: buttonGlow 1.2s infinite alternate;
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.fade-in-scale {
+  animation: fadeInScale 0.6s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.card-float {
+  animation: cardFloat 3s ease-in-out infinite;
+}
+
+.icon-spin {
+  animation: iconSpin 2s linear infinite;
+}
+
+.card-float-delay-1 {
+  animation-delay: 0.2s;
+}
+
+.card-float-delay-2 {
+  animation-delay: 0.4s;
+}
+
+.card-float-delay-3 {
+  animation-delay: 0.6s;
+}
+
+.slide-in-left-delay-1 {
+  animation-delay: 0.2s;
+}
+
+.slide-in-left-delay-2 {
+  animation-delay: 0.4s;
+}
+
+.slide-in-left-delay-3 {
+  animation-delay: 0.6s;
+}
+
+.slide-in-right-delay-1 {
+  animation-delay: 0.2s;
+}
+
+.slide-in-right-delay-2 {
+  animation-delay: 0.4s;
+}
+
+.slide-in-right-delay-3 {
+  animation-delay: 0.6s;
+}
+
+/* Custom slider styles for code editor */
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #a855f7, #d946ef);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.slider::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6, #a855f7, #d946ef);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}

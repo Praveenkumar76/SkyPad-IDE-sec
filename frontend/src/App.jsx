@@ -6,6 +6,7 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Problems from './components/Problems';
 import CodeEditor from './components/CodeEditor';
+import Profile from './components/Profile';
 import './App.css';
 
 function HeroWithNav() {
@@ -25,6 +26,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/problems" element={<Problems />} />
           <Route path="/code-editor" element={<CodeEditor />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
         
       </div>

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { authAPI } from "../utils/api";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -9,6 +10,7 @@ const Login = () => {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
+  const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,8 +21,16 @@ const Login = () => {
     if (!email || !password) return;
     try {
       setIsSubmitting(true);
-      // Simulate API call - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const data = await authAPI.login(email, password);
+      
+      // Store user data and token in localStorage
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userName', data.user.fullName);
+      localStorage.setItem('userEmail', data.user.email);
+      localStorage.setItem('userAvatar', data.user.fullName.substring(0, 2).toUpperCase());
+      localStorage.setItem('userId', data.user.id);
+      
       setShowSuccessPopup(true);
       setTimeout(() => {
         setShowSuccessPopup(false);
@@ -35,13 +45,21 @@ const Login = () => {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!email || !username || !password || password !== confirm) {
+    if (!email || !username || !fullName || !password || password !== confirm) {
       return alert('Please fill all fields and ensure passwords match.');
     }
     try {
       setIsSubmitting(true);
-      // Simulate API call - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const data = await authAPI.register(email, username, fullName, password);
+      
+      // Store user data and token in localStorage
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userName', data.user.fullName);
+      localStorage.setItem('userEmail', data.user.email);
+      localStorage.setItem('userAvatar', data.user.fullName.substring(0, 2).toUpperCase());
+      localStorage.setItem('userId', data.user.id);
+      
       setShowSuccessPopup(true);
       setTimeout(() => {
         setShowSuccessPopup(false);
@@ -58,27 +76,18 @@ const Login = () => {
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center p-4 relative"
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{
         background: `
-          linear-gradient(135deg, #667eea 0%, #764ba2 100%),
-          radial-gradient(circle at 20% 80%, rgba(255,105,180,0.4) 0%, transparent 50%),
-          radial-gradient(circle at 80% 20%, rgba(255,165,0,0.4) 0%, transparent 50%),
-          radial-gradient(circle at 40% 40%, rgba(120,119,198,0.3) 0%, transparent 50%)
-        `,
-        backgroundBlendMode: 'multiply, overlay, overlay, normal'
+          linear-gradient(180deg, rgba(0,0,0,0.7), rgba(0,0,0,0.85)),
+          url('/logo-1.jpg') center/cover no-repeat
+        `
       }}
     >
-      {/* Mountain silhouette overlay */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          background: `
-            linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.1) 30%, rgba(0,0,0,0.4) 70%, rgba(0,0,0,0.8) 100%),
-            linear-gradient(45deg, transparent 60%, rgba(139,69,19,0.3) 70%, rgba(160,82,45,0.4) 80%, rgba(101,67,33,0.5) 90%, rgba(62,39,35,0.6) 100%)
-          `
-        }}
-      />
+      {/* Animated watermark */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+        <span className="blink-pulse text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-extrabold text-white/10">SKYPAD-IDE</span>
+      </div>
       
       <div className="w-full max-w-md relative z-10">
         {/* Glass morphism card */}
@@ -121,6 +130,23 @@ const Login = () => {
                   placeholder="Username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-300"
+                  required
+                />
+                <svg className="w-5 h-5 text-white/70 absolute right-4 top-1/2 transform -translate-y-1/2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+
+            {/* Full Name (only for signup) */}
+            {!isLogin && (
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-300"
                   required
                 />
@@ -267,6 +293,7 @@ const Login = () => {
                   // Reset form
                   setEmail('');
                   setUsername('');
+                  setFullName('');
                   setPassword('');
                   setConfirm('');
                   setShowPassword(false);

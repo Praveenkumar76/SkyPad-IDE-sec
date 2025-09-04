@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardNavbar from './DashboardNavbar';
 import Footer from './Footer';
 import { dashboardData } from '../data/dashboardData';
+import { userAPI } from '../utils/api';
 import { 
   MdCalendarToday,
   MdEmail,
@@ -14,11 +15,69 @@ import {
   MdSearch,
   MdTrendingUp,
   MdCode,
-  MdAssignment
+  MdAssignment,
+  MdPerson,
+  MdArrowDropDown,
+  MdSettings,
+  MdLogout,
+  MdAccountCircle
 } from 'react-icons/md';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef(null);
+  
+  // Get user data from localStorage or context (you can modify this based on your auth system)
+  const [userData, setUserData] = useState({
+    name: localStorage.getItem('userName') || 'John Durairaj',
+    email: localStorage.getItem('userEmail') || 'john.durairaj@email.com',
+    avatar: localStorage.getItem('userAvatar') || 'JD'
+  });
+
+  // Fetch user profile data on component mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const profileData = await userAPI.getProfile();
+          setUserData({
+            name: profileData.fullName,
+            email: profileData.email,
+            avatar: profileData.fullName.substring(0, 2).toUpperCase()
+          });
+          // Update localStorage with fresh data
+          localStorage.setItem('userName', profileData.fullName);
+          localStorage.setItem('userEmail', profileData.email);
+          localStorage.setItem('userAvatar', profileData.fullName.substring(0, 2).toUpperCase());
+        }
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+        // If token is invalid, redirect to login
+        if (error.message.includes('token') || error.message.includes('unauthorized')) {
+          localStorage.clear();
+          navigate('/login');
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [navigate]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   
   const getDifficultyColor = (difficulty) => {
     switch (difficulty.toLowerCase()) {
@@ -92,6 +151,8 @@ const Dashboard = () => {
                   <MdSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-300 w-4 h-4" />
                 </div>
                 
+                {/* User Menu consolidated into DashboardNavbar */}
+                
                 {/* Dashboard Navbar Component */}
                 <DashboardNavbar />
               </div>
@@ -120,7 +181,7 @@ const Dashboard = () => {
                   </p>
                   <button 
                     onClick={() => navigate('/code-editor')}
-                    className="bg-gradient-to-r from-violet-500 via-purple-600 to-fuchsia-600 text-white px-6 py-3 rounded-lg font-medium hover:from-violet-600 hover:via-purple-700 hover:to-fuchsia-700 transition-all duration-300 shadow-lg shadow-violet-500/30 flex items-center space-x-2"
+                    className="btn-primary px-6 py-3 rounded-lg font-medium flex items-center space-x-2 focus-ring"
                   >
                     <MdCode className="w-5 h-5" />
                     <span>Open Code Editor</span>
@@ -136,18 +197,18 @@ const Dashboard = () => {
 
             {/* Performance Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-fuchsia-900/20 backdrop-blur-md rounded-xl p-6 border border-violet-500/30 shadow-lg shadow-violet-500/10">
-                <h4 className="text-gray-300 text-sm mb-2">{dashboardData.performanceCards.problemsSolved.label}</h4>
+              <div className="dashboard-card rounded-xl p-6">
+                <h4 className="text-medium-contrast text-sm mb-2">{dashboardData.performanceCards.problemsSolved.label}</h4>
                 <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">{dashboardData.performanceCards.problemsSolved.value}</div>
               </div>
               
-              <div className="bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-fuchsia-900/20 backdrop-blur-md rounded-xl p-6 border border-violet-500/30 shadow-lg shadow-violet-500/10">
-                <h4 className="text-gray-300 text-sm mb-2">{dashboardData.performanceCards.winLossRatio.label}</h4>
+              <div className="dashboard-card rounded-xl p-6">
+                <h4 className="text-medium-contrast text-sm mb-2">{dashboardData.performanceCards.winLossRatio.label}</h4>
                 <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">{dashboardData.performanceCards.winLossRatio.value}</div>
               </div>
               
-              <div className="bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-fuchsia-900/20 backdrop-blur-md rounded-xl p-6 border border-violet-500/30 shadow-lg shadow-violet-500/10">
-                <h4 className="text-gray-300 text-sm mb-2">{dashboardData.performanceCards.contestAttendance.label}</h4>
+              <div className="dashboard-card rounded-xl p-6">
+                <h4 className="text-medium-contrast text-sm mb-2">{dashboardData.performanceCards.contestAttendance.label}</h4>
                 <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">{dashboardData.performanceCards.contestAttendance.value}</div>
               </div>
             </div>
@@ -157,26 +218,26 @@ const Dashboard = () => {
               {/* Left Column */}
               <div className="space-y-8">
                 {/* Leaderboard */}
-                <div className="bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-fuchsia-900/20 backdrop-blur-md rounded-xl p-6 border border-violet-500/30 shadow-lg shadow-violet-500/10">
+                <div className="dashboard-card rounded-xl p-6">
                   <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-purple-300 to-fuchsia-300 font-semibold mb-6">Leaderboard</h3>
                   
                   <div className="overflow-hidden rounded-lg">
-                    <table className="w-full">
+                    <table className="w-full data-table">
                       <thead>
-                        <tr className="bg-gradient-to-r from-violet-900/20 to-purple-900/20">
-                          <th className="text-left text-violet-300 text-sm font-medium p-3">Rank</th>
-                          <th className="text-left text-violet-300 text-sm font-medium p-3">User</th>
-                          <th className="text-left text-violet-300 text-sm font-medium p-3">Points</th>
-                          <th className="text-left text-violet-300 text-sm font-medium p-3">Last Submission</th>
+                        <tr>
+                          <th className="text-left p-3">Rank</th>
+                          <th className="text-left p-3">User</th>
+                          <th className="text-left p-3">Points</th>
+                          <th className="text-left p-3">Last Submission</th>
                         </tr>
                       </thead>
                       <tbody className="space-y-1">
                         {dashboardData.leaderboard.map((player) => (
                           <tr key={player.rank} className="border-t border-violet-500/20 hover:bg-gradient-to-r hover:from-violet-900/10 hover:to-purple-900/10">
                             <td className="p-3 text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400 font-medium">{player.rank}</td>
-                            <td className="p-3 text-white">{player.user}</td>
+                            <td className="p-3 text-high-contrast">{player.user}</td>
                             <td className="p-3 text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400 font-medium">{player.points}</td>
-                            <td className="p-3 text-gray-300 text-sm">{player.lastSubmission}</td>
+                            <td className="p-3 text-medium-contrast text-sm">{player.lastSubmission}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -185,16 +246,16 @@ const Dashboard = () => {
                 </div>
 
                 {/* Upcoming Contests */}
-                <div className="bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-fuchsia-900/20 backdrop-blur-md rounded-xl p-6 border border-violet-500/30 shadow-lg shadow-violet-500/10">
+                <div className="dashboard-card rounded-xl p-6">
                   <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-purple-300 to-fuchsia-300 font-semibold mb-6">Upcoming Contests</h3>
                   
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <h4 className="text-white text-lg font-medium mb-2">{dashboardData.upcomingContest.title}</h4>
-                      <p className="text-gray-300 text-sm mb-4">
+                      <h4 className="text-high-contrast text-lg font-medium mb-2">{dashboardData.upcomingContest.title}</h4>
+                      <p className="text-medium-contrast text-sm mb-4">
                         {dashboardData.upcomingContest.description}
                       </p>
-                      <button className="bg-gradient-to-r from-violet-500 via-purple-600 to-fuchsia-600 text-white px-6 py-2 rounded-lg font-medium hover:from-violet-600 hover:via-purple-700 hover:to-fuchsia-700 transition-all duration-300 shadow-lg shadow-violet-500/30">
+                      <button className="btn-primary px-6 py-2 rounded-lg font-medium focus-ring">
                         {dashboardData.upcomingContest.buttonText}
                       </button>
                     </div>
@@ -207,23 +268,23 @@ const Dashboard = () => {
                 </div>
 
                 {/* Recent Challenges */}
-                <div className="bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-fuchsia-900/20 backdrop-blur-md rounded-xl p-6 border border-violet-500/30 shadow-lg shadow-violet-500/10">
+                <div className="dashboard-card rounded-xl p-6">
                   <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-purple-300 to-fuchsia-300 font-semibold mb-6">Recent Challenges</h3>
                   
                   <div className="overflow-hidden rounded-lg">
-                    <table className="w-full">
+                    <table className="w-full data-table">
                       <thead>
-                        <tr className="bg-gradient-to-r from-violet-900/20 to-purple-900/20">
-                          <th className="text-left text-violet-300 text-sm font-medium p-3">Challenge</th>
-                          <th className="text-left text-violet-300 text-sm font-medium p-3">Difficulty</th>
-                          <th className="text-left text-violet-300 text-sm font-medium p-3">Status</th>
-                          <th className="text-left text-violet-300 text-sm font-medium p-3">Progress</th>
+                        <tr>
+                          <th className="text-left p-3">Challenge</th>
+                          <th className="text-left p-3">Difficulty</th>
+                          <th className="text-left p-3">Status</th>
+                          <th className="text-left p-3">Progress</th>
                         </tr>
                       </thead>
                       <tbody>
                         {dashboardData.recentChallenges.map((challenge, idx) => (
                           <tr key={idx} className="border-t border-violet-500/20 hover:bg-gradient-to-r hover:from-violet-900/10 hover:to-purple-900/10">
-                            <td className="p-3 text-white">{challenge.name}</td>
+                            <td className="p-3 text-high-contrast">{challenge.name}</td>
                             <td className="p-3">
                               <span className={`text-sm ${getDifficultyColor(challenge.difficulty)}`}>
                                 {challenge.difficulty}
@@ -241,7 +302,7 @@ const Dashboard = () => {
                                   style={{width: `${challenge.progress}%`}}
                                 ></div>
                               </div>
-                              <span className="text-gray-300 text-xs mt-1">{challenge.progress}</span>
+                              <span className="text-medium-contrast text-xs mt-1">{challenge.progress}%</span>
                             </td>
                           </tr>
                         ))}
@@ -254,22 +315,22 @@ const Dashboard = () => {
               {/* Right Column */}
               <div className="space-y-8">
                 {/* Performance Metrics */}
-                <div className="bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-fuchsia-900/20 backdrop-blur-md rounded-xl p-6 border border-violet-500/30 shadow-lg shadow-violet-500/10">
+                <div className="dashboard-card rounded-xl p-6">
                   <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-purple-300 to-fuchsia-300 font-semibold mb-6">Performance Metrics</h3>
                   
                   <div className="grid grid-cols-2 gap-6 mb-6">
                     <div className="text-center">
                       <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 mb-1">{dashboardData.performanceMetrics.submissions.value}</div>
-                      <div className="text-gray-300 text-sm mb-1">{dashboardData.performanceMetrics.submissions.label}</div>
-                      <div className="text-green-400 text-xs">
+                      <div className="text-medium-contrast text-sm mb-1">{dashboardData.performanceMetrics.submissions.label}</div>
+                      <div className="data-positive text-xs">
                         {dashboardData.performanceMetrics.submissions.period} {dashboardData.performanceMetrics.submissions.growth}
                       </div>
                     </div>
                     
                     <div className="text-center">
                       <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 mb-1">{dashboardData.performanceMetrics.accuracy.value}</div>
-                      <div className="text-gray-300 text-sm mb-1">{dashboardData.performanceMetrics.accuracy.label}</div>
-                      <div className="text-green-400 text-xs">
+                      <div className="text-medium-contrast text-sm mb-1">{dashboardData.performanceMetrics.accuracy.label}</div>
+                      <div className="data-positive text-xs">
                         {dashboardData.performanceMetrics.accuracy.period} {dashboardData.performanceMetrics.accuracy.growth}
                       </div>
                     </div>
@@ -284,7 +345,7 @@ const Dashboard = () => {
                             className="w-12 bg-gradient-to-t from-violet-500 to-fuchsia-500 rounded mb-2" 
                             style={{height: `${60 + (idx * 10)}px`}}
                           ></div>
-                          <div className="text-gray-300 text-xs">{week}</div>
+                          <div className="text-medium-contrast text-xs">{week}</div>
                         </div>
                       ))}
                     </div>
@@ -309,12 +370,12 @@ const Dashboard = () => {
                 </div>
 
                 {/* DSA Sheet Progress */}
-                <div className="bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-fuchsia-900/20 backdrop-blur-md rounded-xl p-6 border border-violet-500/30 shadow-lg shadow-violet-500/10">
+                <div className="dashboard-card rounded-xl p-6">
                   <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-purple-300 to-fuchsia-300 font-semibold mb-4">DSA Sheet Progress</h3>
                   
                   <div className="mb-6">
                     <div className="flex justify-between mb-2">
-                      <span className="text-white">{dashboardData.dsaProgress.title}</span>
+                      <span className="text-high-contrast">{dashboardData.dsaProgress.title}</span>
                       <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400 font-medium">{dashboardData.dsaProgress.percentage}%</span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">
@@ -327,16 +388,16 @@ const Dashboard = () => {
                 </div>
 
                 {/* Coins & Rewards */}
-                <div className="bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-fuchsia-900/20 backdrop-blur-md rounded-xl p-6 border border-violet-500/30 shadow-lg shadow-violet-500/10">
+                <div className="dashboard-card rounded-xl p-6">
                   <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-purple-300 to-fuchsia-300 font-semibold mb-4">Coins & Rewards</h3>
                   
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <h4 className="text-white font-medium mb-2">{dashboardData.coinsRewards.title}</h4>
-                      <p className="text-gray-300 text-sm mb-4">
+                      <h4 className="text-high-contrast font-medium mb-2">{dashboardData.coinsRewards.title}</h4>
+                      <p className="text-medium-contrast text-sm mb-4">
                         {dashboardData.coinsRewards.description}
                       </p>
-                      <button className="bg-gradient-to-r from-yellow-500 via-orange-500 to-yellow-600 text-white px-4 py-2 rounded-lg font-medium hover:from-yellow-600 hover:via-orange-600 hover:to-yellow-700 transition-all duration-300 shadow-lg shadow-yellow-500/30">
+                      <button className="bg-gradient-to-r from-yellow-500 via-orange-500 to-yellow-600 text-white px-4 py-2 rounded-lg font-medium hover:from-yellow-600 hover:via-orange-600 hover:to-yellow-700 transition-all duration-300 shadow-lg shadow-yellow-500/30 focus-ring">
                         {dashboardData.coinsRewards.buttonText}
                       </button>
                     </div>

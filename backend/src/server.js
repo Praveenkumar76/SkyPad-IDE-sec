@@ -23,7 +23,9 @@ app.use(morgan('dev'));
 
 // Routers
 const authRouter = require('./routes/auth');
+const usersRouter = require('./routes/users');
 app.use('/api/auth', authRouter);
+app.use('/api/users', usersRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

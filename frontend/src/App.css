@@ -64,3 +64,89 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* Enhanced dashboard theme improvements */
+.dashboard-card {
+  background: rgba(17, 24, 39, 0.8);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-card:hover {
+  background: rgba(17, 24, 39, 0.9);
+  border-color: rgba(139, 92, 246, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced data visualization colors */
+.data-positive {
+  color: #10b981;
+}
+
+.data-negative {
+  color: #ef4444;
+}
+
+.data-neutral {
+  color: #6b7280;
+}
+
+/* Improved contrast for better readability */
+.text-high-contrast {
+  color: #f9fafb;
+}
+
+.text-medium-contrast {
+  color: #d1d5db;
+}
+
+.text-low-contrast {
+  color: #9ca3af;
+}
+
+/* Enhanced focus states for accessibility */
+.focus-ring:focus {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Improved button styles */
+.btn-primary {
+  background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #d946ef 100%);
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #c026d3 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
+}
+
+/* Enhanced table styles for data display */
+.data-table {
+  background: rgba(17, 24, 39, 0.6);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.data-table th {
+  background: rgba(139, 92, 246, 0.1);
+  color: #c4b5fd;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.data-table td {
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.data-table tr:hover {
+  background: rgba(139, 92, 246, 0.05);
+}

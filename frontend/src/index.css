@@ -39,6 +39,19 @@
   }
 }
 
+@keyframes blinkPulse {
+  0%, 100% {
+    opacity: 0.08;
+  }
+  50% {
+    opacity: 0.16;
+  }
+}
+
+.blink-pulse {
+  animation: blinkPulse 6s ease-in-out infinite;
+}
+
 @keyframes slideInLeft {
   from {
     opacity: 0;

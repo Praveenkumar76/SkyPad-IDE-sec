@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   MdHome,
@@ -7,15 +7,28 @@ import {
   MdOutlineMenu,
   MdLogout,
   MdCode,
-  MdKeyboardArrowDown
+  MdKeyboardArrowDown,
+  MdPerson
 } from 'react-icons/md';
-import { GoFileCode,GoGift } from "react-icons/go";
+import { GoGift } from "react-icons/go";
 
 const DashboardNavbar = () => {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [showLogoutPopup, setShowLogoutPopup] = useState(false);
+  const [userName, setUserName] = useState(localStorage.getItem('userName') || 'User');
+  const [userEmail, setUserEmail] = useState(localStorage.getItem('userEmail') || '');
+  const [userAvatar, setUserAvatar] = useState(localStorage.getItem('userAvatar') || (localStorage.getItem('userName') ? localStorage.getItem('userName').substring(0,2).toUpperCase() : 'U'));
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const name = localStorage.getItem('userName') || 'User';
+    const email = localStorage.getItem('userEmail') || '';
+    const avatar = localStorage.getItem('userAvatar') || name.substring(0,2).toUpperCase();
+    setUserName(name);
+    setUserEmail(email);
+    setUserAvatar(avatar);
+  }, []);
 
   const handleLogout = () => {
     // Close the dropdown
@@ -24,10 +37,11 @@ const DashboardNavbar = () => {
     // Show logout success popup
     setShowLogoutPopup(true);
     
-    // Navigate to landing page after a short delay
+    // Clear auth and navigate to login after a short delay
+    localStorage.clear();
     setTimeout(() => {
-      navigate('/');
-    }, 1500);
+      navigate('/login');
+    }, 800);
   };
 
   // Function to get active link styles
@@ -45,11 +59,11 @@ const DashboardNavbar = () => {
         className="flex items-center space-x-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
       >
         <div className="w-8 h-8 bg-violet-600 rounded-full flex items-center justify-center">
-          <span className="text-white text-sm font-semibold">L</span>
+          <span className="text-white text-sm font-semibold">{userAvatar}</span>
         </div>
         <div className="text-left">
-          <p className="text-white font-medium text-sm">Lokiiii</p>
-          <p className="text-gray-300 text-xs">User</p>
+          <p className="text-white font-medium text-sm">{userName}</p>
+          <p className="text-gray-300 text-xs">{userEmail || 'User'}</p>
         </div>
         <MdKeyboardArrowDown 
           className={`text-white w-4 h-4 transition-transform duration-300 ${
@@ -63,10 +77,12 @@ const DashboardNavbar = () => {
         <div className="absolute top-full right-0 mt-2 w-64 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 shadow-2xl z-50">
           <div className="space-y-4">
             {/* Dashboard Title */}
-            <h1 className="text-xl font-bold text-white mb-4">Lokiiii</h1>
+            <h1 className="text-xl font-bold text-white mb-4">{userName}</h1>
             
             {/* Navigation Links */}
+
             <div className="space-y-2">
+
               <Link 
                 to="/dashboard" 
                 className={getActiveLinkClass('/dashboard')}
@@ -75,8 +91,16 @@ const DashboardNavbar = () => {
                 <span>Dashboard</span>
               </Link>
               <Link 
-                to="/codeeditor" 
-                className={getActiveLinkClass('/codeeditor')}
+                to="/profile" 
+                className={getActiveLinkClass('/profile')}
+              >
+                <MdPerson className="w-5 h-5" />
+                <span>Profile</span>
+              </Link>
+
+              <Link 
+                to="/code-editor" 
+                className={getActiveLinkClass('/code-editor')}
               >
                 <MdCode className="w-5 h-5" />
                 <span>Code Editor</span>
@@ -87,13 +111,6 @@ const DashboardNavbar = () => {
               >
                 <MdEmojiEvents className="w-5 h-5" />
                 <span>Challenges</span>
-              </Link>
-              <Link 
-                to="/dsaproblems" 
-                className={getActiveLinkClass('/dsaproblems')}
-              >
-                <GoFileCode className="w-5 h-5" />
-                <span>DSA Problems</span>
               </Link>
               <Link 
                 to="/problems" 

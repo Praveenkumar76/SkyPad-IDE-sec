@@ -1,8 +1,9 @@
 export const dashboardData = {
   user: {
-    name: "Loki",
-    title: "Software Engineer",
-    avatar: "L"
+    name: localStorage.getItem('userName') || 'John Durairaj',
+    title: localStorage.getItem('userTitle') || 'Software Engineer',
+    avatar: localStorage.getItem('userProfilePicture') || localStorage.getItem('userAvatar') || (localStorage.getItem('userName') ? localStorage.getItem('userName').substring(0, 2).toUpperCase() : 'JD'),
+    profilePictureUrl: localStorage.getItem('userProfilePicture') || null,
   },
   company: {
     name: "SKYPAD-IDE",

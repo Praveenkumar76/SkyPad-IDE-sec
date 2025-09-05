@@ -42,15 +42,22 @@ const Dashboard = () => {
         const token = localStorage.getItem('token');
         if (token) {
           const profileData = await userAPI.getProfile();
+          console.log('Profile data received:', profileData); // Debug log
           setUserData({
             name: profileData.fullName,
             email: profileData.email,
-            avatar: profileData.fullName.substring(0, 2).toUpperCase()
+            avatar: profileData.fullName.substring(0, 2).toUpperCase(),
+            profilePictureUrl: profileData.profilePictureUrl || null,
           });
           // Update localStorage with fresh data
           localStorage.setItem('userName', profileData.fullName);
           localStorage.setItem('userEmail', profileData.email);
           localStorage.setItem('userAvatar', profileData.fullName.substring(0, 2).toUpperCase());
+          if (profileData.profilePictureUrl) {
+            localStorage.setItem('userProfilePicture', profileData.profilePictureUrl);
+          } else {
+            localStorage.removeItem('userProfilePicture');
+          }
         }
       } catch (error) {
         console.error('Failed to fetch user profile:', error);
@@ -161,35 +168,80 @@ const Dashboard = () => {
             {/* Welcome Section */}
             <div className="flex items-center space-x-6 mb-8">
               {/* Profile Image */}
-              <div className="w-16 h-16 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-full flex items-center justify-center shadow-lg shadow-violet-500/30">
-                <span className="text-white text-2xl font-bold">{dashboardData.user.avatar}</span>
+              <div className="w-16 h-16 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-full flex items-center justify-center shadow-lg shadow-violet-500/30 overflow-hidden">
+                {console.log('Rendering profile picture:', userData.profilePictureUrl)} {/* Debug log */}
+                {userData.profilePictureUrl ? (
+                  <img 
+                    src={userData.profilePictureUrl} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.log('Image failed to load:', e.target.src); // Debug log
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <span 
+                  className="text-white text-2xl font-bold"
+                  style={{ display: userData.profilePictureUrl ? 'none' : 'flex' }}
+                >
+                  {userData.avatar}
+                </span>
               </div>
               
               <div>
-                <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">Welcome back, {dashboardData.user.name}!</h2>
+                <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">Welcome back, {userData.name}!</h2>
                 <p className="text-gray-300">{dashboardData.user.title}</p>
               </div>
             </div>
 
-            {/* Level Up Section */}
-            <div className="bg-gradient-to-br from-violet-900/30 via-purple-900/20 to-fuchsia-900/20 backdrop-blur-md rounded-xl p-6 border border-violet-500/30 shadow-lg shadow-violet-500/10 mb-8">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-purple-300 to-fuchsia-300 text-xl font-semibold mb-2">{dashboardData.levelUpSection.title}</h3>
-                  <p className="text-gray-300 text-sm mb-4">
-                    {dashboardData.levelUpSection.description}
-                  </p>
-                  <button 
-                    onClick={() => navigate('/code-editor')}
-                    className="btn-primary px-6 py-3 rounded-lg font-medium flex items-center space-x-2 focus-ring"
-                  >
-                    <MdCode className="w-5 h-5" />
-                    <span>Open Code Editor</span>
-                  </button>
+            {/* Quick Actions Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {/* Level Up Section */}
+              <div className="bg-gradient-to-br from-violet-900/30 via-purple-900/20 to-fuchsia-900/20 backdrop-blur-md rounded-xl p-6 border border-violet-500/30 shadow-lg shadow-violet-500/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-purple-300 to-fuchsia-300 text-xl font-semibold mb-2">{dashboardData.levelUpSection.title}</h3>
+                    <p className="text-gray-300 text-sm mb-4">
+                      {dashboardData.levelUpSection.description}
+                    </p>
+                    <button 
+                      onClick={() => navigate('/code-editor')}
+                      className="btn-primary px-6 py-3 rounded-lg font-medium flex items-center space-x-2 focus-ring"
+                    >
+                      <MdCode className="w-5 h-5" />
+                      <span>Open Code Editor</span>
+                    </button>
+                  </div>
+                  <div className="ml-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-lg flex items-center justify-center shadow-lg shadow-violet-500/30">
+                      <MdCode className="text-white w-8 h-8" />
+                    </div>
+                  </div>
                 </div>
-                <div className="ml-8">
-                  <div className="w-32 h-20 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-lg flex items-center justify-center shadow-lg shadow-violet-500/30">
-                    <MdCode className="text-white w-12 h-12" />
+              </div>
+
+              {/* Upload Question Section */}
+              <div className="bg-gradient-to-br from-emerald-900/30 via-teal-900/20 to-cyan-900/20 backdrop-blur-md rounded-xl p-6 border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 text-xl font-semibold mb-2">Share Your Knowledge</h3>
+                    <p className="text-gray-300 text-sm mb-4">
+                      Create and upload coding problems for the community to solve.
+                    </p>
+                    <button 
+                      onClick={() => navigate('/upload-question')}
+                      className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-6 py-3 rounded-lg font-medium flex items-center space-x-2 focus-ring transition-all duration-300"
+                    >
+                      <MdAssignment className="w-5 h-5" />
+                      <span>Upload Question</span>
+                    </button>
+                  </div>
+                  <div className="ml-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                      <MdAssignment className="text-white w-8 h-8" />
+                    </div>
                   </div>
                 </div>
               </div>

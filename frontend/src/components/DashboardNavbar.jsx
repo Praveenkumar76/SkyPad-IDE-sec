@@ -8,7 +8,8 @@ import {
   MdLogout,
   MdCode,
   MdKeyboardArrowDown,
-  MdPerson
+  MdPerson,
+  MdDescription
 } from 'react-icons/md';
 import { GoGift } from "react-icons/go";
 
@@ -18,6 +19,7 @@ const DashboardNavbar = () => {
   const [userName, setUserName] = useState(localStorage.getItem('userName') || 'User');
   const [userEmail, setUserEmail] = useState(localStorage.getItem('userEmail') || '');
   const [userAvatar, setUserAvatar] = useState(localStorage.getItem('userAvatar') || (localStorage.getItem('userName') ? localStorage.getItem('userName').substring(0,2).toUpperCase() : 'U'));
+  const [userProfilePicture, setUserProfilePicture] = useState(localStorage.getItem('userProfilePicture') || '');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -25,9 +27,11 @@ const DashboardNavbar = () => {
     const name = localStorage.getItem('userName') || 'User';
     const email = localStorage.getItem('userEmail') || '';
     const avatar = localStorage.getItem('userAvatar') || name.substring(0,2).toUpperCase();
+    const profilePicture = localStorage.getItem('userProfilePicture') || '';
     setUserName(name);
     setUserEmail(email);
     setUserAvatar(avatar);
+    setUserProfilePicture(profilePicture);
   }, []);
 
   const handleLogout = () => {
@@ -58,8 +62,12 @@ const DashboardNavbar = () => {
         onClick={() => setIsNavOpen(!isNavOpen)}
         className="flex items-center space-x-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
       >
-        <div className="w-8 h-8 bg-violet-600 rounded-full flex items-center justify-center">
-          <span className="text-white text-sm font-semibold">{userAvatar}</span>
+        <div className="w-8 h-8 bg-violet-600 rounded-full flex items-center justify-center overflow-hidden">
+          {userProfilePicture ? (
+            <img src={userProfilePicture} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-white text-sm font-semibold">{userAvatar}</span>
+          )}
         </div>
         <div className="text-left">
           <p className="text-white font-medium text-sm">{userName}</p>
@@ -106,6 +114,13 @@ const DashboardNavbar = () => {
                 <span>Code Editor</span>
               </Link>
               <Link 
+                to="/dsa-sheet" 
+                className={getActiveLinkClass('/dsa-sheet')}
+              >
+                <MdDescription className="w-5 h-5" />
+                <span>DSA Sheet</span>
+              </Link>
+              <Link 
                 to="/challenges" 
                 className={getActiveLinkClass('/challenges')}
               >
@@ -133,6 +148,13 @@ const DashboardNavbar = () => {
               >
                 <GoGift className="w-5 h-5" />
                 <span>Rewards</span>
+              </Link>
+              <Link 
+                to="/upload-question" 
+                className={getActiveLinkClass('/upload-question')}
+              >
+                <MdCode className="w-5 h-5" />
+                <span>Upload Question</span>
               </Link>
               
               

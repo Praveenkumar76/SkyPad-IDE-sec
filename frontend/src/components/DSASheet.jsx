@@ -9,7 +9,8 @@ import {
   MdTrendingUp,
   MdTimer,
   MdCode,
-  MdAssignment
+  MdAssignment,
+  MdRefresh
 } from 'react-icons/md';
 
 const DSASheet = () => {
@@ -27,6 +28,26 @@ const DSASheet = () => {
     
     // Check for existing problems and add them to DSA sheet
     checkAndAddExistingProblems();
+    
+    // Listen for storage changes to refresh when new problems are added
+    const handleStorageChange = (e) => {
+      if (e.key === 'dsaProblems') {
+        // Force re-render when DSA problems are updated
+        setProgress(prev => ({ ...prev }));
+      }
+    };
+    
+    // Listen for custom DSA problems update event
+    const handleDSAUpdate = () => {
+      refreshDSASheet();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('dsaProblemsUpdated', handleDSAUpdate);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('dsaProblemsUpdated', handleDSAUpdate);
+    };
   }, []);
 
   const checkAndAddExistingProblems = async () => {
@@ -133,6 +154,23 @@ const DSASheet = () => {
     setProgress(newProgress);
   }, [solvedProblems]);
 
+  // Add a refresh function that can be called manually
+  const refreshDSASheet = () => {
+    checkAndAddExistingProblems();
+    // Force progress recalculation
+    const newProgress = {};
+    dsaSheetData.topics.forEach(topic => {
+      const uploadedProblems = JSON.parse(localStorage.getItem('dsaProblems') || '{}')[topic.id] || [];
+      const solved = uploadedProblems.filter(p => solvedProblems.has(p.id)).length;
+      newProgress[topic.id] = {
+        solved,
+        total: uploadedProblems.length,
+        percentage: uploadedProblems.length > 0 ? Math.round((solved / uploadedProblems.length) * 100) : 0
+      };
+    });
+    setProgress(newProgress);
+  };
+
   const handleProblemClick = (problemId) => {
     navigate(`/solve/${problemId}`);
   };
@@ -170,7 +208,16 @@ const DSASheet = () => {
               </h1>
               <p className="text-gray-300 mt-2">Master Data Structures and Algorithms systematically</p>
             </div>
-            <DashboardNavbar />
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={refreshDSASheet}
+                className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+              >
+                <MdRefresh className="w-4 h-4" />
+                <span>Refresh</span>
+              </button>
+              <DashboardNavbar />
+            </div>
           </div>
         </div>
 

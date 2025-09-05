@@ -196,8 +196,10 @@ const QuestionUpload = () => {
       dsaProblems[matchedTopic].push(dsaProblem);
       localStorage.setItem('dsaProblems', JSON.stringify(dsaProblems));
       console.log(`Question added to DSA sheet under topic: ${matchedTopic}`);
+      console.log('Updated DSA problems:', dsaProblems);
     } else {
       console.log('Question has no matching tags for DSA sheet - will only appear in Problems section');
+      console.log('Available tags:', tags);
     }
   };
 
@@ -237,6 +239,9 @@ const QuestionUpload = () => {
       
       // Add to DSA sheet based on tags
       addToDSASheet(result);
+      
+      // Trigger a custom event to refresh DSA sheet
+      window.dispatchEvent(new CustomEvent('dsaProblemsUpdated'));
       
       alert('Question uploaded successfully and added to DSA sheet!');
       navigate('/dsa-sheet');

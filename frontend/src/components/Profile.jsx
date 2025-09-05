@@ -75,21 +75,57 @@ const Profile = () => {
     setIsEditing(true);
   };
 
-  const handleSave = () => {
-    setIsEditing(false);
-    // Save to localStorage
-    localStorage.setItem('userName', profileData.name);
-    localStorage.setItem('userEmail', profileData.email);
-    localStorage.setItem('userRole', profileData.role);
-    localStorage.setItem('userCompany', profileData.company);
-    localStorage.setItem('userCity', profileData.city);
-    localStorage.setItem('userState', profileData.state);
-    localStorage.setItem('userAge', profileData.age.toString());
-    localStorage.setItem('userGender', profileData.gender);
-    if (profileData.profilePicture) {
-      localStorage.setItem('userProfilePicture', profileData.profilePicture);
+  const handleSave = async () => {
+    try {
+      console.log('Saving profile with data:', {
+        name: profileData.name,
+        email: profileData.email,
+        hasProfilePicture: !!profileData.profilePicture,
+        profilePictureLength: profileData.profilePicture?.length
+      });
+      
+      // Update backend
+      const response = await fetch('http://localhost:5000/api/users/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          fullName: profileData.name,
+          email: profileData.email,
+          username: profileData.name,
+          profilePictureUrl: profileData.profilePicture || null
+        })
+      });
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        
+        // Update localStorage
+        localStorage.setItem('userName', profileData.name);
+        localStorage.setItem('userEmail', profileData.email);
+        localStorage.setItem('userRole', profileData.role);
+        localStorage.setItem('userCompany', profileData.company);
+        localStorage.setItem('userCity', profileData.city);
+        localStorage.setItem('userState', profileData.state);
+        localStorage.setItem('userAge', profileData.age.toString());
+        localStorage.setItem('userGender', profileData.gender);
+        if (profileData.profilePicture) {
+          localStorage.setItem('userProfilePicture', profileData.profilePicture);
+          localStorage.setItem('userAvatar', profileData.profilePicture);
+        }
+        
+        setIsEditing(false);
+        alert('Profile updated successfully!');
+        console.log('Profile saved:', updatedUser);
+      } else {
+        throw new Error('Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Profile update error:', error);
+      alert('Failed to update profile. Please try again.');
     }
-    console.log('Profile saved:', profileData);
   };
 
   const handleCancel = () => {
@@ -107,12 +143,17 @@ const Profile = () => {
   const handleImageUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
+      console.log('File selected:', file.name, file.type, file.size);
       const reader = new FileReader();
       reader.onload = (e) => {
+        console.log('File read successfully, base64 length:', e.target.result.length);
         setProfileData(prev => ({
           ...prev,
           profilePicture: e.target.result
         }));
+      };
+      reader.onerror = (error) => {
+        console.error('Error reading file:', error);
       };
       reader.readAsDataURL(file);
     }

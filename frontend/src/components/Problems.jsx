@@ -8,7 +8,8 @@ import {
   MdMemory, 
   MdTag, 
   MdPerson,
-  MdPlayArrow
+  MdPlayArrow,
+  MdRefresh
 } from 'react-icons/md';
 
 const Problems = () => {
@@ -23,7 +24,85 @@ const Problems = () => {
 
   useEffect(() => {
     fetchProblems();
+    addExistingProblemsToDSASheet();
   }, []);
+
+  const addExistingProblemsToDSASheet = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/problems');
+      if (response.ok) {
+        const data = await response.json();
+        const problems = data.problems || [];
+        
+        const tagToTopic = {
+          'recursion': 'recursion',
+          'linkedlist': 'linkedlist',
+          'array': 'array',
+          'string': 'string',
+          'stack': 'stack',
+          'queue': 'queue',
+          'tree': 'tree',
+          'graph': 'graph',
+          'dynamic-programming': 'dynamic-programming',
+          'dp': 'dynamic-programming',
+          'greedy': 'greedy'
+        };
+
+        const dsaProblems = JSON.parse(localStorage.getItem('dsaProblems') || '{}');
+        let updated = false;
+
+        problems.forEach(problem => {
+          const tags = problem.tags || [];
+          for (const tag of tags) {
+            const lowerTag = tag.toLowerCase().trim();
+            if (tagToTopic[lowerTag]) {
+              const topic = tagToTopic[lowerTag];
+              if (!dsaProblems[topic]) {
+                dsaProblems[topic] = [];
+              }
+              
+              // Check if problem already exists
+              const exists = dsaProblems[topic].some(p => p.id === problem._id);
+              if (!exists) {
+                const dsaProblem = {
+                  id: problem._id,
+                  title: problem.title,
+                  difficulty: problem.difficulty,
+                  description: problem.description,
+                  link: `/solve/${problem._id}`,
+                  isSolved: false,
+                  problem: {
+                    title: problem.title,
+                    description: problem.description,
+                    sampleTestCases: problem.sampleTestCases || [],
+                    hiddenTestCases: problem.hiddenTestCases || [],
+                    constraints: problem.constraints || '',
+                    allowedLanguages: problem.allowedLanguages || ['JavaScript']
+                  }
+                };
+                
+                dsaProblems[topic].push(dsaProblem);
+                updated = true;
+                console.log(`Added existing problem "${problem.title}" to DSA sheet under topic: ${topic}`);
+              }
+            }
+          }
+        });
+
+        if (updated) {
+          localStorage.setItem('dsaProblems', JSON.stringify(dsaProblems));
+          console.log('Existing problems added to DSA sheet');
+          console.log('Updated DSA problems:', dsaProblems);
+          // Trigger refresh event
+          window.dispatchEvent(new CustomEvent('dsaProblemsUpdated'));
+        } else {
+          console.log('No new problems to add to DSA sheet');
+        }
+      }
+    } catch (error) {
+      console.error('Error adding existing problems to DSA sheet:', error);
+    }
+  };
 
   const fetchProblems = async () => {
     try {
@@ -98,6 +177,16 @@ const Problems = () => {
             </div>
             
             <div className="flex items-center space-x-4">
+              {/* Refresh Button */}
+              <button
+                onClick={addExistingProblemsToDSASheet}
+                className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                title="Refresh DSA Sheet with existing problems"
+              >
+                <MdRefresh className="w-4 h-4" />
+                <span>Sync to DSA</span>
+              </button>
+              
               {/* Search Bar */}
               <div className="relative">
                 <input

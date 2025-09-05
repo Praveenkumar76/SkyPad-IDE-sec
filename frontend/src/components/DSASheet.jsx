@@ -117,19 +117,17 @@ const DSASheet = () => {
   }, []);
 
   useEffect(() => {
-    // Calculate progress for each topic
+    // Calculate progress for each topic - only use uploaded problems with tags
     const newProgress = {};
     dsaSheetData.topics.forEach(topic => {
-      // Get problems from both static data and localStorage
-      const staticProblems = dsaSheetData.problems[topic.id] || [];
+      // Only get uploaded problems from localStorage (no static problems)
       const uploadedProblems = JSON.parse(localStorage.getItem('dsaProblems') || '{}')[topic.id] || [];
-      const allProblems = [...staticProblems, ...uploadedProblems];
       
-      const solved = allProblems.filter(p => solvedProblems.has(p.id)).length;
+      const solved = uploadedProblems.filter(p => solvedProblems.has(p.id)).length;
       newProgress[topic.id] = {
         solved,
-        total: allProblems.length,
-        percentage: allProblems.length > 0 ? Math.round((solved / allProblems.length) * 100) : 0
+        total: uploadedProblems.length,
+        percentage: uploadedProblems.length > 0 ? Math.round((solved / uploadedProblems.length) * 100) : 0
       };
     });
     setProgress(newProgress);
@@ -288,11 +286,10 @@ const DSASheet = () => {
               {/* Problems List */}
               <div className="space-y-3">
                 {(() => {
-                  const staticProblems = dsaSheetData.problems[selectedTopic] || [];
+                  // Only show uploaded problems with tags
                   const uploadedProblems = JSON.parse(localStorage.getItem('dsaProblems') || '{}')[selectedTopic] || [];
-                  const allProblems = [...staticProblems, ...uploadedProblems];
                   
-                  return allProblems.map((problem, index) => {
+                  return uploadedProblems.map((problem, index) => {
                   const isSolved = solvedProblems.has(problem.id);
                   return (
                     <div

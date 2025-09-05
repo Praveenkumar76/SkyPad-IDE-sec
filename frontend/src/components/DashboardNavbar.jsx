@@ -9,6 +9,7 @@ import {
   MdCode,
   MdKeyboardArrowDown,
   MdPerson,
+  MdUpload,
   MdDescription
 } from 'react-icons/md';
 import { GoGift } from "react-icons/go";
@@ -143,20 +144,26 @@ const DashboardNavbar = () => {
                 <span>Contests</span>
               </Link>
               <Link 
+                to="/interv-examine" 
+                className={getActiveLinkClass('/interv-examine')}
+              >
+                <MdCode className="w-5 h-5" />
+                <span>Interview-Examine</span>
+              </Link>
+              <Link 
+                to="/upload-question" 
+                className={getActiveLinkClass('/upload-question')}
+              >
+                <MdUpload className="w-5 h-5" />
+                <span>Upload Question</span>
+              </Link>
+              <Link 
                 to="/rewards" 
                 className={getActiveLinkClass('/rewards')}
               >
                 <GoGift className="w-5 h-5" />
                 <span>Rewards</span>
               </Link>
-              <Link 
-                to="/upload-question" 
-                className={getActiveLinkClass('/upload-question')}
-              >
-                <MdCode className="w-5 h-5" />
-                <span>Upload Question</span>
-              </Link>
-              
               
             </div>
 

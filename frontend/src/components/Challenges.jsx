@@ -166,7 +166,8 @@ const Challenges = () => {
               { key: 'ongoing', label: 'Ongoing', count: challenges.ongoing.length },
               { key: 'upcoming', label: 'Upcoming', count: challenges.upcoming.length },
               { key: 'completed', label: 'Completed', count: challenges.completed.length },
-              { key: 'one-vs-one', label: 'One vs One', count: 0 }
+              { key: 'one-vs-one', label: 'One vs One', count: 0 },
+              { key: 'contest', label: 'Create Contest', count: 0 }
             ].map(tab => (
               <button
                 key={tab.key}
@@ -279,6 +280,66 @@ const Challenges = () => {
               </div>
             ))}
           </div>
+
+          {/* Contest Creation Tab */}
+          {activeTab === 'contest' && (
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-white mb-2">Create Contest</h2>
+                <p className="text-gray-300">Create a coding contest with multiple problems</p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20">
+                <h3 className="text-xl font-semibold text-white mb-6">Contest Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Contest Name</label>
+                    <input
+                      type="text"
+                      placeholder="Enter contest name"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:border-violet-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Duration (minutes)</label>
+                    <input
+                      type="number"
+                      placeholder="120"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:border-violet-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Start Date</label>
+                    <input
+                      type="datetime-local"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-violet-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">Max Participants</label>
+                    <input
+                      type="number"
+                      placeholder="100"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:border-violet-400"
+                    />
+                  </div>
+                </div>
+                <div className="mt-6">
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Description</label>
+                  <textarea
+                    placeholder="Describe your contest..."
+                    rows={4}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:border-violet-400 resize-none"
+                  />
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <button className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white px-8 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105">
+                    Create Contest
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* One vs One Tab */}
           {activeTab === 'one-vs-one' && (

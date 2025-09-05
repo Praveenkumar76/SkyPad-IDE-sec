@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Hero from './components/Hero';
 import SignUp from './components/SignUp';
 import Login from './components/Login';
@@ -13,6 +13,7 @@ import DSASheet from './components/DSASheet';
 import Challenges from './components/Challenges';
 import Rewards from './components/Rewards';
 import ChallengeRoom from './components/ChallengeRoom';
+import InterviewExamine from './components/InterviewExamine';
 import './App.css';
 
 function HeroWithNav() {
@@ -28,6 +29,12 @@ function ScrollToTop() {
   }, [pathname]);
 
   return null;
+}
+
+function InterviewExamineRedirect() {
+  const { pathname } = useLocation();
+  const newPath = pathname.replace('/interview-examine', '/interv-examine');
+  return <Navigate to={newPath} replace />;
 }
 
 function App() {
@@ -49,6 +56,11 @@ function App() {
           <Route path="/challenges" element={<Challenges />} />
           <Route path="/rewards" element={<Rewards />} />
           <Route path="/challenge-room/:roomId" element={<ChallengeRoom />} />
+          <Route path="/interview-examine" element={<InterviewExamineRedirect />} />
+          <Route path="/interview-examine/:sessionId" element={<InterviewExamineRedirect />} />
+          <Route path="/interv-examine" element={<InterviewExamine />} />
+          <Route path="/interv-examine/:sessionId" element={<InterviewExamine />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
         
       </div>

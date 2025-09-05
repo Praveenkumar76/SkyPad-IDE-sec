@@ -195,6 +195,9 @@ const QuestionUpload = () => {
       
       dsaProblems[matchedTopic].push(dsaProblem);
       localStorage.setItem('dsaProblems', JSON.stringify(dsaProblems));
+      console.log(`Question added to DSA sheet under topic: ${matchedTopic}`);
+    } else {
+      console.log('Question has no matching tags for DSA sheet - will only appear in Problems section');
     }
   };
 

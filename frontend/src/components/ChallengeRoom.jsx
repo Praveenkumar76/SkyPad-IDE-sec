@@ -149,6 +149,7 @@ const ChallengeRoom = () => {
   const selectProblem = (problem) => {
     if (!isHost) return;
     
+    console.log('Selecting problem:', problem);
     setSelectedProblem(problem);
     const updatedRoom = {
       ...room,
@@ -161,7 +162,9 @@ const ChallengeRoom = () => {
     setIsChallengeActive(true);
     localStorage.setItem(`challengeRoom_${roomId}`, JSON.stringify(updatedRoom));
     
-    clearInterval(intervalRef.current);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
     startChallengeTimer();
   };
 

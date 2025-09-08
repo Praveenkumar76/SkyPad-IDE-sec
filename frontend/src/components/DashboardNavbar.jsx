@@ -148,7 +148,7 @@ const DashboardNavbar = () => {
                 className={getActiveLinkClass('/interv-examine')}
               >
                 <MdCode className="w-5 h-5" />
-                <span>Interview-Examine</span>
+                <span>Interv-Examine</span>
               </Link>
               <Link 
                 to="/upload-question" 

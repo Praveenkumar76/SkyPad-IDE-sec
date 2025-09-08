@@ -1,4 +1,21 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+// Resolve API base URL from environment with safe fallbacks
+const resolvedEnvBase = (
+  import.meta?.env?.VITE_API_URL ||
+  import.meta?.env?.VITE_BACKEND_URL ||
+  import.meta?.env?.PUBLIC_API_URL ||
+  ''
+);
+
+const API_BASE_URL = (() => {
+  const trimmed = typeof resolvedEnvBase === 'string' ? resolvedEnvBase.trim() : '';
+  if (trimmed) {
+    return trimmed.replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin.replace(/\/$/, '')}/api`;
+  }
+  return 'http://localhost:5000/api';
+})();
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {

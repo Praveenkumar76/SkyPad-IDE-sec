@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import io from 'socket.io-client';
 import DashboardNavbar from './DashboardNavbar';
 import { 
   MdCode, 
@@ -27,6 +28,14 @@ const InterviewExamine = () => {
   const [isHost, setIsHost] = useState(false);
   const [shareLink, setShareLink] = useState('');
   const messagesEndRef = useRef(null);
+  const [socket, setSocket] = useState(null);
+  const [connected, setConnected] = useState(false);
+
+  const SOCKET_URL = (
+    import.meta?.env?.VITE_SOCKET_URL ||
+    import.meta?.env?.VITE_BACKEND_URL ||
+    'http://localhost:5000'
+  );
 
   const languages = [
     { value: 'JavaScript', label: 'JavaScript' },
@@ -98,6 +107,49 @@ const InterviewExamine = () => {
     }
   };
 
+  // Socket.IO setup for collaborative editing and chat
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const s = io(`${SOCKET_URL}/interview`, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      path: '/socket.io'
+    });
+
+    s.on('connect', () => {
+      setConnected(true);
+      s.emit('join-session', {
+        sessionId,
+        user: {
+          id: localStorage.getItem('userId'),
+          name: localStorage.getItem('userName') || 'User'
+        }
+      });
+    });
+
+    s.on('disconnect', () => setConnected(false));
+
+    s.on('code-update', (payload) => {
+      if (typeof payload?.code === 'string') {
+        setCode(payload.code);
+        if (payload.language) setSelectedLanguage(payload.language);
+      }
+    });
+
+    s.on('run-result', (result) => {
+      setIsRunning(false);
+      setOutput(result?.success ? String(result.output || '') : `Error: ${result?.output || 'Unknown'}`);
+    });
+
+    s.on('chat-message', (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    setSocket(s);
+    return () => { s.close(); };
+  }, [sessionId]);
+
   const joinSession = () => {
     const newParticipant = {
       id: localStorage.getItem('userId'),
@@ -124,6 +176,11 @@ const InterviewExamine = () => {
 
   const runCode = async () => {
     if (!code.trim()) return;
+    if (socket && connected && sessionId) {
+      setIsRunning(true);
+      socket.emit('run-code', { sessionId, code, language: selectedLanguage.toLowerCase() });
+      return;
+    }
     
     setIsRunning(true);
     try {
@@ -225,7 +282,6 @@ const InterviewExamine = () => {
 
   const sendMessage = () => {
     if (!newMessage.trim()) return;
-    
     const message = {
       id: Date.now(),
       sender: localStorage.getItem('userName') || 'Anonymous',
@@ -236,6 +292,9 @@ const InterviewExamine = () => {
     const updatedMessages = [...messages, message];
     setMessages(updatedMessages);
     setNewMessage('');
+    if (socket && connected && sessionId) {
+      socket.emit('chat-message', { sessionId, message });
+    }
     
     const updatedSession = {
       ...session,
@@ -275,7 +334,7 @@ const InterviewExamine = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
-                Interview-Examine
+                Interv-Examine
               </h1>
               <p className="text-gray-300 mt-2">Collaborative coding session</p>
             </div>

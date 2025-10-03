@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear SkyPad Cache</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        .info {
+            background: #e0e7ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        .success {
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+        pre {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+        .warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Clear SkyPad IDE Cache</h1>
+        
+        <div class="warning">
+            <strong>⚠️ Important:</strong> If you uploaded 25 problems but only see them in your session, 
+            you need to clear the old localStorage cache so the app fetches from the MongoDB database instead.
+        </div>
+        
+        <div class="info">
+            <strong>💡 Why Clear Cache?</strong><br>
+            The old version used localStorage (browser-specific storage). The new version uses MongoDB 
+            (shared database for all users). Clearing cache forces the app to fetch from the database.
+        </div>
+        
+        <h2>What will be cleared:</h2>
+        <ul>
+            <li><code>dsaProblems</code> - Old problem storage (will fetch from DB instead)</li>
+            <li><code>solvedProblems</code> - Will re-sync from backend</li>
+        </ul>
+        
+        <h2>What will be kept:</h2>
+        <ul>
+            <li>✅ Your login session (token)</li>
+            <li>✅ User profile data</li>
+            <li>✅ All problems in MongoDB database</li>
+        </ul>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="clearOldCache()">🧹 Clear Old Cache Only</button>
+            <button onclick="clearAllAndReload()">🔄 Clear All & Reload</button>
+            <button onclick="showCacheInfo()">ℹ️ Show Cache Info</button>
+        </div>
+        
+        <div id="success" class="success"></div>
+        <pre id="info" style="display: none;"></pre>
+    </div>
+
+    <script>
+        function clearOldCache() {
+            const removed = [];
+            
+            // Remove old problem storage
+            if (localStorage.getItem('dsaProblems')) {
+                localStorage.removeItem('dsaProblems');
+                removed.push('dsaProblems');
+            }
+            
+            // Keep token, userName, etc., but remove problem cache
+            const success = document.getElementById('success');
+            success.style.display = 'block';
+            success.innerHTML = `
+                ✅ Cleared: ${removed.join(', ') || 'Nothing to clear'}<br>
+                ✅ Your login session is preserved<br>
+                ✅ Reload the Problems or DSA Sheet page to fetch from database
+            `;
+        }
+        
+        function clearAllAndReload() {
+            if (confirm('This will clear ALL localStorage and reload. You may need to login again. Continue?')) {
+                localStorage.clear();
+                alert('✅ All cache cleared! Reloading...');
+                window.location.href = '/';
+            }
+        }
+        
+        function showCacheInfo() {
+            const info = document.getElementById('info');
+            info.style.display = 'block';
+            
+            const cacheData = {
+                'dsaProblems': localStorage.getItem('dsaProblems') ? 'EXISTS (old cache)' : 'Not found',
+                'solvedProblems': localStorage.getItem('solvedProblems') ? 'EXISTS' : 'Not found',
+                'token': localStorage.getItem('token') ? 'EXISTS (login active)' : 'Not found',
+                'userName': localStorage.getItem('userName') || 'Not found'
+            };
+            
+            info.textContent = JSON.stringify(cacheData, null, 2);
+        }
+    </script>
+</body>
+</html>

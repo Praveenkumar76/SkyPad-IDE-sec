@@ -11,7 +11,8 @@ import {
   MdPerson,
   MdTimer,
   MdCheckCircle,
-  MdError
+  MdError,
+  MdArrowBack
 } from 'react-icons/md';
 
 const InterviewExamine = () => {
@@ -28,8 +29,13 @@ const InterviewExamine = () => {
   const [isHost, setIsHost] = useState(false);
   const [shareLink, setShareLink] = useState('');
   const messagesEndRef = useRef(null);
+  const textAreaRef = useRef(null);
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
+  // Prevent echo loop when applying remote updates
+  const suppressNextEmitRef = useRef(false);
+  // Debounce timer for code-change emits
+  const debounceTimerRef = useRef(null);
 
   const SOCKET_URL = (
     import.meta?.env?.VITE_SOCKET_URL ||
@@ -126,12 +132,24 @@ const InterviewExamine = () => {
           name: localStorage.getItem('userName') || 'User'
         }
       });
+
+      // Share current code to newly joined peers to bootstrap their editor
+      // Emit only if we have something meaningful
+      if (code && code.length > 0) {
+        s.emit('code-change', {
+          sessionId,
+          code,
+          language: selectedLanguage
+        });
+      }
     });
 
     s.on('disconnect', () => setConnected(false));
 
     s.on('code-update', (payload) => {
       if (typeof payload?.code === 'string') {
+        // Mark that the next local change originates from remote to avoid re-emitting
+        suppressNextEmitRef.current = true;
         setCode(payload.code);
         if (payload.language) setSelectedLanguage(payload.language);
       }
@@ -146,9 +164,50 @@ const InterviewExamine = () => {
       setMessages((prev) => [...prev, msg]);
     });
 
+    s.on('chat-history', (history) => {
+      if (Array.isArray(history)) {
+        setMessages(history);
+      }
+    });
+
+    s.on('participants', (list) => {
+      if (Array.isArray(list)) setParticipants(list);
+    });
+
     setSocket(s);
     return () => { s.close(); };
   }, [sessionId]);
+
+  // Emit code changes in real-time with a small debounce
+  useEffect(() => {
+    if (!socket || !connected || !sessionId) return;
+
+    // Clear any pending debounce
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      // If this update came from a remote 'code-update', do not echo back
+      if (suppressNextEmitRef.current) {
+        suppressNextEmitRef.current = false;
+        return;
+      }
+      socket.emit('code-change', {
+        sessionId,
+        code,
+        language: selectedLanguage
+      });
+    }, 150);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+    };
+  }, [code, selectedLanguage, socket, connected, sessionId]);
 
   const joinSession = () => {
     const newParticipant = {
@@ -288,20 +347,11 @@ const InterviewExamine = () => {
       content: newMessage,
       timestamp: new Date().toISOString()
     };
-    
-    const updatedMessages = [...messages, message];
-    setMessages(updatedMessages);
+    // Do not locally append to avoid duplicates; rely on server echo
     setNewMessage('');
     if (socket && connected && sessionId) {
       socket.emit('chat-message', { sessionId, message });
     }
-    
-    const updatedSession = {
-      ...session,
-      messages: updatedMessages
-    };
-    setSession(updatedSession);
-    localStorage.setItem(`interviewSession_${sessionId}`, JSON.stringify(updatedSession));
   };
 
   const copyShareLink = () => {
@@ -332,11 +382,22 @@ const InterviewExamine = () => {
         {/* Header */}
         <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
-                Interv-Examine
-              </h1>
-              <p className="text-gray-300 mt-2">Collaborative coding session</p>
+            <div className="flex items-center space-x-4">
+              {/* Back Button */}
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
+                title="Back to Dashboard"
+              >
+                <MdArrowBack className="w-6 h-6 text-white" />
+              </button>
+              
+              <div>
+                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
+                  Interv-Examine
+                </h1>
+                <p className="text-gray-300 mt-2">Collaborative coding session</p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <button
@@ -390,8 +451,34 @@ const InterviewExamine = () => {
               {/* Code Textarea */}
               <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 flex-1">
                 <textarea
+                  ref={textAreaRef}
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      e.preventDefault(); // Prevent default tab behavior (focus change)
+
+                      const start = e.target.selectionStart;
+                      const end = e.target.selectionEnd;
+
+                      // Create the new value with the tab spaces
+                      const updated = code.substring(0, start) + '  ' + code.substring(end);
+                      setCode(updated);
+
+                      // Schedule the cursor position update
+                      // This ensures it runs AFTER React has updated the DOM
+                      setTimeout(() => {
+                        if (textAreaRef.current) {
+                          const newCursorPosition = start + 2;
+                          textAreaRef.current.selectionStart = newCursorPosition;
+                          textAreaRef.current.selectionEnd = newCursorPosition;
+                        }
+                      }, 0);
+                    }
+                  }}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="Write your code here..."
                   className="w-full h-64 bg-black/20 border border-white/20 rounded-lg p-4 text-white font-mono text-sm resize-none focus:outline-none focus:border-violet-400"
                 />

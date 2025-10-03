@@ -20,7 +20,8 @@ import {
   MdArrowDropDown,
   MdSettings,
   MdLogout,
-  MdAccountCircle
+  MdAccountCircle,
+  MdArrowBack
 } from 'react-icons/md';
 
 const Dashboard = () => {
@@ -131,6 +132,15 @@ const Dashboard = () => {
             {/* Top Header with Logo */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center space-x-3">
+                {/* Back Button */}
+                <button
+                  onClick={() => navigate('/')}
+                  className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
+                  title="Back to Home"
+                >
+                  <MdArrowBack className="w-5 h-5 text-white" />
+                </button>
+                
                 {/* Company Logo */}
                 <img
                   src="/logo.png"

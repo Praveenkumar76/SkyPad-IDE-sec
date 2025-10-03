@@ -19,23 +19,36 @@ const server = http.createServer(app); // Use http server to attach Socket.IO
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://sky-pad-ide.vercel.app' // Your deployed frontend
+  'http://localhost:5174',
+  'https://sky-pad-ide.vercel.app',
+  'https://sky-pad-ide-sec.vercel.app',  // Add all possible Vercel URLs
 ];
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (allowedOrigins.includes(origin) || !origin) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list or matches Vercel pattern
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
+      console.log('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  optionsSuccessStatus: 200
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 };
 
 // --- 3. MIDDLEWARE ---
+// Apply CORS before other middleware
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));  // Enable pre-flight for all routes
 app.use(express.json());
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
@@ -52,7 +65,17 @@ app.use('/api/problems', problemsRouter);
 
 // --- 5. SETUP AND ATTACH SOCKET.IO ---
 const io = new Server(server, {
-  cors: corsOptions
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST']
+  }
 });
 
 // --- 6. CODE EDITOR LOGIC (MERGED FROM codeEditorServer.js) ---
@@ -98,7 +121,88 @@ async function executeCode(code, language) {
                         else resolve({ success: true, output: stdout });
                     });
                 });
-            // Add cases for 'cpp', 'java', 'c' here if needed
+            case 'java': {
+                // Create a temporary directory to hold Java files and class outputs
+                const tempDir = path.join(__dirname, `java_${Date.now()}`);
+                await fs.mkdir(tempDir, { recursive: true });
+                // Try to detect public class name; default to Main if not found
+                const classMatch = code.match(/public\s+class\s+(\w+)/);
+                const className = classMatch ? classMatch[1] : 'Main';
+                const javaFilePath = path.join(tempDir, `${className}.java`);
+                await fs.writeFile(javaFilePath, code);
+
+                return new Promise((resolve) => {
+                    // Compile
+                    exec(`javac "${javaFilePath}"`, { cwd: tempDir, timeout: 15000 }, async (compileErr, _stdout, compileStderr) => {
+                        if (compileErr) {
+                            // Cleanup directory
+                            try { await fs.rm(tempDir, { recursive: true, force: true }); } catch (_) {}
+                            resolve({ success: false, output: compileStderr || compileErr.message });
+                            return;
+                        }
+                        // Run
+                        exec(`java -cp . ${className}`, { cwd: tempDir, timeout: 15000 }, async (runErr, runStdout, runStderr) => {
+                            // Cleanup directory
+                            try { await fs.rm(tempDir, { recursive: true, force: true }); } catch (_) {}
+                            if (runErr) resolve({ success: false, output: runStderr || runErr.message });
+                            else resolve({ success: true, output: runStdout });
+                        });
+                    });
+                });
+            }
+            case 'c': {
+                // Write to a temporary C file and compile
+                const cFilePath = await createTempFile(code, '.c');
+                const exePath = cFilePath.replace(/\.c$/, process.platform === 'win32' ? '.exe' : '');
+                return new Promise((resolve) => {
+                    const compileCmd = process.platform === 'win32'
+                        ? `gcc "${cFilePath}" -O2 -std=c11 -o "${exePath}"`
+                        : `gcc "${cFilePath}" -O2 -std=c11 -o "${exePath}"`;
+                    exec(compileCmd, { timeout: 20000 }, (compileErr, _stdout, compileStderr) => {
+                        const runAndCleanup = async () => {
+                            try { await deleteTempFile(cFilePath); } catch (_) {}
+                        };
+                        if (compileErr) {
+                            runAndCleanup().then(() => resolve({ success: false, output: compileStderr || compileErr.message }));
+                            return;
+                        }
+                        const runCmd = process.platform === 'win32' ? `"${exePath}"` : `"${exePath}"`;
+                        exec(runCmd, { timeout: 15000 }, async (runErr, runStdout, runStderr) => {
+                            await runAndCleanup();
+                            // Also remove the compiled binary
+                            try { await fs.unlink(exePath); } catch (_) {}
+                            if (runErr) resolve({ success: false, output: runStderr || runErr.message });
+                            else resolve({ success: true, output: runStdout });
+                        });
+                    });
+                });
+            }
+            case 'cpp':
+            case 'c++': {
+                // Write to a temporary C++ file and compile
+                const cppFilePath = await createTempFile(code, '.cpp');
+                const exePath = cppFilePath.replace(/\.cpp$/, process.platform === 'win32' ? '.exe' : '');
+                return new Promise((resolve) => {
+                    const compileCmd = `g++ "${cppFilePath}" -O2 -std=c++17 -o "${exePath}"`;
+                    exec(compileCmd, { timeout: 30000 }, (compileErr, _stdout, compileStderr) => {
+                        const runAndCleanup = async () => {
+                            try { await deleteTempFile(cppFilePath); } catch (_) {}
+                        };
+                        if (compileErr) {
+                            runAndCleanup().then(() => resolve({ success: false, output: compileStderr || compileErr.message }));
+                            return;
+                        }
+                        const runCmd = process.platform === 'win32' ? `"${exePath}"` : `"${exePath}"`;
+                        exec(runCmd, { timeout: 15000 }, async (runErr, runStdout, runStderr) => {
+                            await runAndCleanup();
+                            // Also remove the compiled binary
+                            try { await fs.unlink(exePath); } catch (_) {}
+                            if (runErr) resolve({ success: false, output: runStderr || runErr.message });
+                            else resolve({ success: true, output: runStdout });
+                        });
+                    });
+                });
+            }
             default:
                 return { success: false, output: `Language "${language}" is not supported.` };
         }
@@ -133,6 +237,11 @@ io.on('connection', (socket) => {
 // Real-time collaborative editor and chat using Socket.IO rooms keyed by sessionId
 const interviewNamespace = io.of('/interview');
 
+// In-memory participants store per sessionId
+const sessionParticipants = new Map(); // Map<string, Array<{id:string,name:string}>>
+// In-memory chat history per sessionId
+const sessionMessages = new Map(); // Map<string, Array<Message>>
+
 interviewNamespace.on('connection', (socket) => {
   // Join a specific interview session room
   socket.on('join-session', ({ sessionId, user }) => {
@@ -140,7 +249,26 @@ interviewNamespace.on('connection', (socket) => {
       if (!sessionId) return;
       socket.join(sessionId);
       socket.data.sessionId = sessionId;
+      if (user?.id) socket.data.userId = user.id;
       interviewNamespace.to(sessionId).emit('system', { type: 'join', user, timestamp: Date.now() });
+
+      // Track participants
+      const current = sessionParticipants.get(sessionId) || [];
+      const exists = current.find(p => p.id === user?.id);
+      let updated;
+      if (exists) {
+        updated = current.map(p => (p.id === user.id ? { id: user.id, name: user.name } : p));
+      } else if (user?.id) {
+        updated = [...current, { id: user.id, name: user.name || 'User' }];
+      } else {
+        updated = current;
+      }
+      sessionParticipants.set(sessionId, updated);
+      interviewNamespace.to(sessionId).emit('participants', updated);
+
+      // Send chat history to the newly joined client
+      const history = sessionMessages.get(sessionId) || [];
+      socket.emit('chat-history', history);
     } catch (e) {
       // no-op
     }
@@ -162,7 +290,28 @@ interviewNamespace.on('connection', (socket) => {
   // Chat message relay within the room
   socket.on('chat-message', ({ sessionId, message }) => {
     if (!sessionId || !message) return;
-    interviewNamespace.to(sessionId).emit('chat-message', message);
+    // Append to session history
+    const list = sessionMessages.get(sessionId) || [];
+    const normalized = {
+      id: message.id || Date.now(),
+      sender: message.sender || 'Anonymous',
+      content: message.content || '',
+      timestamp: message.timestamp || new Date().toISOString()
+    };
+    const updated = [...list, normalized];
+    sessionMessages.set(sessionId, updated);
+
+    interviewNamespace.to(sessionId).emit('chat-message', normalized);
+  });
+
+  socket.on('disconnect', () => {
+    const sessionId = socket.data.sessionId;
+    const userId = socket.data.userId;
+    if (!sessionId || !userId) return;
+    const current = sessionParticipants.get(sessionId) || [];
+    const updated = current.filter(p => p.id !== userId);
+    sessionParticipants.set(sessionId, updated);
+    interviewNamespace.to(sessionId).emit('participants', updated);
   });
 });
 

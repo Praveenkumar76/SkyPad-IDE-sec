@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../utils/api';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardNavbar from './DashboardNavbar';
@@ -9,7 +10,9 @@ import {
   MdTag, 
   MdPerson,
   MdPlayArrow,
-  MdRefresh
+  MdRefresh,
+  MdArrowBack,
+  MdCheckCircle
 } from 'react-icons/md';
 
 const Problems = () => {
@@ -19,100 +22,60 @@ const Problems = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('All');
   const [error, setError] = useState('');
+  const [solvedProblems, setSolvedProblems] = useState(new Set());
 
   const difficulties = ['All', 'Easy', 'Medium', 'Hard'];
 
   useEffect(() => {
     fetchProblems();
-    addExistingProblemsToDSASheet();
+    fetchSolvedProblems();
+    
+    // Listen for new problem uploads
+    const handleProblemUpdate = () => {
+      fetchProblems();
+      fetchSolvedProblems();
+    };
+    
+    window.addEventListener('dsaProblemsUpdated', handleProblemUpdate);
+    return () => window.removeEventListener('dsaProblemsUpdated', handleProblemUpdate);
   }, []);
 
-  const addExistingProblemsToDSASheet = async () => {
+  const fetchSolvedProblems = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/problems');
+      const response = await fetch(`${API_BASE_URL}/users/solved`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
       if (response.ok) {
         const data = await response.json();
-        const problems = data.problems || [];
+        setSolvedProblems(new Set(data.solvedProblems || []));
         
-        const tagToTopic = {
-          'recursion': 'recursion',
-          'linkedlist': 'linkedlist',
-          'array': 'array',
-          'string': 'string',
-          'stack': 'stack',
-          'queue': 'queue',
-          'tree': 'tree',
-          'graph': 'graph',
-          'dynamic-programming': 'dynamic-programming',
-          'dp': 'dynamic-programming',
-          'greedy': 'greedy'
-        };
-
-        const dsaProblems = JSON.parse(localStorage.getItem('dsaProblems') || '{}');
-        let updated = false;
-
-        problems.forEach(problem => {
-          const tags = problem.tags || [];
-          for (const tag of tags) {
-            const lowerTag = tag.toLowerCase().trim();
-            if (tagToTopic[lowerTag]) {
-              const topic = tagToTopic[lowerTag];
-              if (!dsaProblems[topic]) {
-                dsaProblems[topic] = [];
-              }
-              
-              // Check if problem already exists
-              const exists = dsaProblems[topic].some(p => p.id === problem._id);
-              if (!exists) {
-                const dsaProblem = {
-                  id: problem._id,
-                  title: problem.title,
-                  difficulty: problem.difficulty,
-                  description: problem.description,
-                  link: `/solve/${problem._id}`,
-                  isSolved: false,
-                  problem: {
-                    title: problem.title,
-                    description: problem.description,
-                    sampleTestCases: problem.sampleTestCases || [],
-                    hiddenTestCases: problem.hiddenTestCases || [],
-                    constraints: problem.constraints || '',
-                    allowedLanguages: problem.allowedLanguages || ['JavaScript']
-                  }
-                };
-                
-                dsaProblems[topic].push(dsaProblem);
-                updated = true;
-                console.log(`Added existing problem "${problem.title}" to DSA sheet under topic: ${topic}`);
-              }
-            }
-          }
-        });
-
-        if (updated) {
-          localStorage.setItem('dsaProblems', JSON.stringify(dsaProblems));
-          console.log('Existing problems added to DSA sheet');
-          console.log('Updated DSA problems:', dsaProblems);
-          // Trigger refresh event
-          window.dispatchEvent(new CustomEvent('dsaProblemsUpdated'));
-        } else {
-          console.log('No new problems to add to DSA sheet');
-        }
+        // Also sync to localStorage for offline access
+        localStorage.setItem('solvedProblems', JSON.stringify(data.solvedProblems || []));
       }
     } catch (error) {
-      console.error('Error adding existing problems to DSA sheet:', error);
+      console.error('Error fetching solved problems:', error);
+      // Fallback to localStorage
+      const localSolved = JSON.parse(localStorage.getItem('solvedProblems') || '[]');
+      setSolvedProblems(new Set(localSolved));
     }
   };
 
   const fetchProblems = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/problems');
+      // Fetch ALL problems from database (public endpoint, visible to all users)
+      // Backend now defaults to limit=10000, so no need to specify
+      const response = await fetch(`${API_BASE_URL}/problems`);
       if (!response.ok) {
         throw new Error('Failed to fetch problems');
       }
       const data = await response.json();
       setProblems(data.problems || []);
+      console.log(`✅ Loaded ${data.problems?.length || 0} problems from database (public, all users' uploads)`);
+      console.log(`📊 Total in DB: ${data.total || 0}`);
     } catch (err) {
       setError('Failed to load problems');
       console.error('Error fetching problems:', err);
@@ -169,22 +132,56 @@ const Problems = () => {
         <div className="p-6">
           {/* Header and Search */}
           <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
-                All Problems
-              </h2>
-              <p className="text-gray-300 mt-2">Solve coding challenges and improve your skills</p>
+            <div className="flex items-center space-x-4">
+              {/* Back Button */}
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
+                title="Back to Dashboard"
+              >
+                <MdArrowBack className="w-6 h-6 text-white" />
+              </button>
+              
+              <div>
+                <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
+                  All Problems
+                </h2>
+                <p className="text-gray-300 mt-2">Solve coding challenges and improve your skills</p>
+              </div>
             </div>
             
             <div className="flex items-center space-x-4">
-              {/* Refresh Button */}
+              {/* Clear Cache Button (temporary debug) */}
               <button
-                onClick={addExistingProblemsToDSASheet}
-                className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-                title="Refresh DSA Sheet with existing problems"
+                onClick={() => {
+                  if (confirm('Clear old localStorage cache and reload fresh data from database?')) {
+                    localStorage.removeItem('dsaProblems');
+                    console.log('✅ Cleared dsaProblems cache');
+                    fetchProblems();
+                    fetchSolvedProblems();
+                    window.dispatchEvent(new CustomEvent('dsaProblemsUpdated'));
+                    alert('Cache cleared! Data is now loading from MongoDB database.');
+                  }
+                }}
+                className="bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                title="Clear old cache and fetch from database"
               >
                 <MdRefresh className="w-4 h-4" />
-                <span>Sync to DSA</span>
+                <span>Clear Cache</span>
+              </button>
+              
+              {/* Refresh Button */}
+              <button
+                onClick={() => {
+                  fetchProblems();
+                  fetchSolvedProblems();
+                  window.dispatchEvent(new CustomEvent('dsaProblemsUpdated'));
+                }}
+                className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                title="Refresh problems from database"
+              >
+                <MdRefresh className="w-4 h-4" />
+                <span>Refresh</span>
               </button>
               
               {/* Search Bar */}
@@ -249,20 +246,27 @@ const Problems = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProblems.map((problem) => (
+              {filteredProblems.map((problem) => {
+                const isSolved = solvedProblems.has(problem._id);
+                return (
                 <div
                   key={problem._id}
-                  className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:border-violet-400/50 transition-all duration-300 hover:scale-105 cursor-pointer group"
+                  className={`bg-white/10 backdrop-blur-md rounded-xl p-6 border transition-all duration-300 hover:scale-105 cursor-pointer group ${
+                    isSolved ? 'border-green-400/50 hover:border-green-400' : 'border-white/20 hover:border-violet-400/50'
+                  }`}
                   onClick={() => navigate(`/solve/${problem._id}`)}
                 >
                   <div className="space-y-4">
                     {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-white group-hover:text-violet-300 transition-colors line-clamp-2">
-                          {problem.title}
-                        </h3>
-                        <div className="flex items-center space-x-2 mt-2">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <h3 className="text-lg font-semibold text-white group-hover:text-violet-300 transition-colors line-clamp-2">
+                            {problem.title}
+                          </h3>
+                          {isSolved && <MdCheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />}
+                        </div>
+                        <div className="flex items-center space-x-2">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(problem.difficulty)}`}>
                             {problem.difficulty}
                           </span>
@@ -338,22 +342,42 @@ const Problems = () => {
                           e.stopPropagation();
                           navigate(`/solve/${problem._id}`);
                         }}
-                        className="w-full bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center space-x-2 transition-all duration-300 hover:scale-105"
+                        className={`w-full px-4 py-2 rounded-lg font-medium flex items-center justify-center space-x-2 transition-all duration-300 hover:scale-105 ${
+                          isSolved 
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
+                            : 'bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white'
+                        }`}
                       >
-                        <MdPlayArrow className="w-4 h-4" />
-                        <span>Solve Problem</span>
+                        {isSolved ? (
+                          <>
+                            <MdCheckCircle className="w-4 h-4" />
+                            <span>Solved ✓</span>
+                          </>
+                        ) : (
+                          <>
+                            <MdPlayArrow className="w-4 h-4" />
+                            <span>Solve Problem</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
 
           {/* Stats */}
           <div className="mt-12 text-center">
-            <div className="text-gray-400 text-sm">
-              Showing {filteredProblems.length} of {problems.length} problems
+            <div className="flex items-center justify-center space-x-6 text-sm">
+              <div className="text-gray-400">
+                Showing {filteredProblems.length} of {problems.length} problems
+              </div>
+              <div className="flex items-center space-x-2 text-green-400">
+                <MdCheckCircle className="w-4 h-4" />
+                <span>{solvedProblems.size} Solved</span>
+              </div>
             </div>
           </div>
         </div>

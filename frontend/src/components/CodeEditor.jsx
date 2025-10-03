@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-import { MdPlayArrow, MdSettings, MdCode, MdLanguage, MdDownload, MdFileCopy } from 'react-icons/md';
+import { MdPlayArrow, MdSettings, MdCode, MdLanguage, MdDownload, MdFileCopy, MdArrowBack } from 'react-icons/md';
 
 import io from 'socket.io-client';
 
@@ -46,24 +47,25 @@ const languageOptions = [
 
 
 const CodeEditor = () => {
+  const textAreaRef = useRef(null);
 
-  const [code, setCode] = useState(languageTemplates.javascript);
+  const [code, setCode] = useState(languageTemplates.javascript);
 
-  const [language, setLanguage] = useState('javascript');
+  const [language, setLanguage] = useState('javascript');
 
-  const [output, setOutput] = useState('');
+  const [output, setOutput] = useState('');
 
-  const [isRunning, setIsRunning] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
 
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
-  const [fontSize, setFontSize] = useState(16);
+  const [fontSize, setFontSize] = useState(16);
 
-  const [theme, setTheme] = useState('vs-dark');
+  const [theme, setTheme] = useState('vs-dark');
 
-  const [socket, setSocket] = useState(null);
+  const [socket, setSocket] = useState(null);
 
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
 
 
@@ -270,35 +272,44 @@ const CodeEditor = () => {
 
         <div className="p-6">
 
-          {/* Header */}
+          {/* Header */}
 
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-8">
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3">
 
-              <div className="w-12 h-12 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/30">
+              {/* Back Button */}
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
+                title="Back to Dashboard"
+              >
+                <MdArrowBack className="w-6 h-6 text-white" />
+              </button>
 
-                <MdCode className="text-white w-7 h-7" />
+              <div className="w-12 h-12 bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/30">
 
-              </div>
+                <MdCode className="text-white w-7 h-7" />
 
-              <div>
+              </div>
 
-                <h1 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 text-3xl font-bold">
+              <div>
 
-                  SkyPad Code Editor
+                <h1 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 text-3xl font-bold">
 
-                </h1>
+                  SkyPad Code Editor
 
-                <p className="text-gray-300">Write, run, and collaborate on code</p>
+                </h1>
 
-              </div>
+                <p className="text-gray-300">Write, run, and collaborate on code</p>
 
-            </div>
+              </div>
 
-           
+            </div>
 
-            <div className="flex items-center space-x-4">
+           
+
+            <div className="flex items-center space-x-4">
 
               <div className="flex items-center space-x-2">
 
@@ -531,8 +542,30 @@ const CodeEditor = () => {
                   <textarea
 
                     value={code}
-
+                    ref={textAreaRef}
                     onChange={(e) => setCode(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Tab') {
+                        e.preventDefault(); // Prevent default tab behavior (focus change)
+
+                        const start = e.target.selectionStart;
+                        const end = e.target.selectionEnd;
+
+                        // Create the new value with the tab spaces
+                        const updated = code.substring(0, start) + '  ' + code.substring(end);
+                        setCode(updated);
+
+                        // Schedule the cursor position update
+                        // This ensures it runs AFTER React has updated the DOM
+                        setTimeout(() => {
+                          if (textAreaRef.current) {
+                            const newCursorPosition = start + 2;
+                            textAreaRef.current.selectionStart = newCursorPosition;
+                            textAreaRef.current.selectionEnd = newCursorPosition;
+                          }
+                        }, 0);
+                      }
+                    }}
 
                     className="w-full h-full bg-transparent text-gray-300 font-mono text-sm resize-none border-none outline-none"
 

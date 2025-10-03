@@ -58,7 +58,7 @@ const DashboardNavbar = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative z-[9999]">
       <button 
         onClick={() => setIsNavOpen(!isNavOpen)}
         className="flex items-center space-x-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
@@ -83,7 +83,7 @@ const DashboardNavbar = () => {
       
       {/* Profile Dropdown Navigation */}
       {isNavOpen && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 shadow-2xl z-50">
+        <div className="absolute top-full right-0 mt-2 w-64 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 shadow-2xl z-[9999]">
           <div className="space-y-4">
             {/* Dashboard Title */}
             <h1 className="text-xl font-bold text-white mb-4">{userName}</h1>

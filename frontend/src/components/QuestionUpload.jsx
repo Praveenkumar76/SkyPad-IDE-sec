@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../utils/api';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -141,67 +142,7 @@ const QuestionUpload = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const addToDSASheet = (problem) => {
-    // Map tags to DSA sheet topics
-    const tagToTopic = {
-      'recursion': 'recursion',
-      'linkedlist': 'linkedlist',
-      'array': 'array',
-      'string': 'string',
-      'stack': 'stack',
-      'queue': 'queue',
-      'tree': 'tree',
-      'graph': 'graph',
-      'dynamic-programming': 'dynamic-programming',
-      'dp': 'dynamic-programming',
-      'greedy': 'greedy'
-    };
-
-    // Find matching topic
-    const tags = problem.tags || [];
-    let matchedTopic = null;
-    
-    for (const tag of tags) {
-      const lowerTag = tag.toLowerCase().trim();
-      if (tagToTopic[lowerTag]) {
-        matchedTopic = tagToTopic[lowerTag];
-        break;
-      }
-    }
-
-    if (matchedTopic) {
-      // Add to localStorage for DSA sheet integration
-      const dsaProblems = JSON.parse(localStorage.getItem('dsaProblems') || '{}');
-      if (!dsaProblems[matchedTopic]) {
-        dsaProblems[matchedTopic] = [];
-      }
-      
-      const dsaProblem = {
-        id: problem._id,
-        title: problem.title,
-        difficulty: problem.difficulty,
-        description: problem.description,
-        link: `/solve/${problem._id}`,
-        isSolved: false,
-        problem: {
-          title: problem.title,
-          description: problem.description,
-          sampleTestCases: problem.sampleTestCases || [],
-          hiddenTestCases: problem.hiddenTestCases || [],
-          constraints: problem.constraints || '',
-          allowedLanguages: problem.allowedLanguages || ['JavaScript']
-        }
-      };
-      
-      dsaProblems[matchedTopic].push(dsaProblem);
-      localStorage.setItem('dsaProblems', JSON.stringify(dsaProblems));
-      console.log(`Question added to DSA sheet under topic: ${matchedTopic}`);
-      console.log('Updated DSA problems:', dsaProblems);
-    } else {
-      console.log('Question has no matching tags for DSA sheet - will only appear in Problems section');
-      console.log('Available tags:', tags);
-    }
-  };
+  // No need for localStorage anymore - problems are stored in DB and fetched by DSASheet
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -218,7 +159,7 @@ const QuestionUpload = () => {
         throw new Error('Please log in to upload questions');
       }
 
-      const response = await fetch('http://localhost:5000/api/problems', {
+      const response = await fetch(`${API_BASE_URL}/problems`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -237,14 +178,25 @@ const QuestionUpload = () => {
 
       const result = await response.json();
       
-      // Add to DSA sheet based on tags
-      addToDSASheet(result);
+      console.log('Problem created successfully:', result);
+      console.log('Problem ID:', result._id);
+      console.log('Problem tags:', result.tags);
       
-      // Trigger a custom event to refresh DSA sheet
+      // Trigger event to refresh DSA sheet and Problems (they will fetch from DB)
       window.dispatchEvent(new CustomEvent('dsaProblemsUpdated'));
       
-      alert('Question uploaded successfully and added to DSA sheet!');
-      navigate('/dsa-sheet');
+      const hasDSATags = result.tags?.some(tag => {
+        const lowerTag = tag.toLowerCase().trim();
+        return ['recursion', 'linkedlist', 'array', 'string', 'stack', 'queue', 'tree', 'graph', 'dynamic-programming', 'dp', 'greedy'].includes(lowerTag);
+      });
+      
+      if (hasDSATags) {
+        alert('✅ Question uploaded successfully!\n\n📊 This problem will appear in:\n• Problems section\n• DSA Sheet (based on tags)');
+      } else {
+        alert('✅ Question uploaded successfully!\n\n📊 This problem will appear in Problems section.\n\n💡 Tip: Add tags like "array", "recursion", etc. to make it appear in DSA Sheet.');
+      }
+      
+      navigate('/problems');
     } catch (error) {
       console.error('Upload error:', error);
       alert(error.message || 'Failed to upload question');
@@ -441,6 +393,27 @@ const QuestionUpload = () => {
                 </button>
               </div>
 
+              {/* Input Format Guide */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
+                <h4 className="text-blue-300 font-semibold mb-2">📘 Input Format Guide (IMPORTANT!)</h4>
+                <div className="text-sm text-blue-200 space-y-2">
+                  <p><strong>✅ Use simple formats that are easy to parse:</strong></p>
+                  <div className="bg-black/30 p-3 rounded space-y-1 font-mono text-xs">
+                    <p className="text-green-300">• Single number: <code>5</code></p>
+                    <p className="text-green-300">• Space-separated: <code>1 2 3 4</code></p>
+                    <p className="text-green-300">• Two lines: <code>4\n1 2 3 4</code> (size then values)</p>
+                    <p className="text-green-300">• Multiple lines: <code>3\nhello\nworld\ntest</code></p>
+                  </div>
+                  <p className="text-red-300 mt-2"><strong>❌ Avoid these formats:</strong></p>
+                  <div className="bg-black/30 p-3 rounded space-y-1 font-mono text-xs">
+                    <p className="text-red-300">• Arrays with brackets: <code>[1, 2, 3]</code> ❌</p>
+                    <p className="text-red-300">• Variable assignments: <code>arr = [1, 2]</code> ❌</p>
+                    <p className="text-red-300">• Python/JS syntax: <code>{"n = 5"}</code> ❌</p>
+                  </div>
+                  <p className="text-yellow-300 mt-2">💡 <strong>Why?</strong> Simple formats work in ALL languages without complex parsing!</p>
+                </div>
+              </div>
+
               {formData.sampleTestCases.map((testCase, index) => (
                 <div key={index} className="border border-white/20 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-between mb-4">
@@ -459,17 +432,20 @@ const QuestionUpload = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-medium-contrast text-sm font-medium mb-2">
-                        Input *
+                        Input (stdin) *
                       </label>
                       <textarea
                         value={testCase.input}
                         onChange={(e) => updateSampleTestCase(index, 'input', e.target.value)}
                         rows={3}
-                        className={`w-full px-3 py-2 bg-white/10 backdrop-blur-md border rounded-lg text-white placeholder-gray-300 focus:outline-none focus:border-violet-400 transition-colors resize-none ${
+                        className={`w-full px-3 py-2 bg-white/10 backdrop-blur-md border rounded-lg text-white placeholder-gray-300 focus:outline-none focus:border-violet-400 transition-colors resize-none font-mono ${
                           errors[`sampleInput${index}`] ? 'border-red-500' : 'border-white/20'
                         }`}
-                        placeholder="Enter input"
+                        placeholder="Example: 5  or  1 2 3 4  or  3&#10;hello&#10;world"
                       />
+                      {testCase.input && (testCase.input.includes('[') || testCase.input.includes('=')) && (
+                        <p className="text-yellow-400 text-xs mt-1">⚠️ Warning: Avoid brackets or = signs. Use simple space-separated values.</p>
+                      )}
                       {errors[`sampleInput${index}`] && <p className="text-red-400 text-sm mt-1">{errors[`sampleInput${index}`]}</p>}
                     </div>
 
@@ -540,17 +516,20 @@ const QuestionUpload = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-medium-contrast text-sm font-medium mb-2">
-                        Input *
+                        Input (stdin) *
                       </label>
                       <textarea
                         value={testCase.input}
                         onChange={(e) => updateHiddenTestCase(index, 'input', e.target.value)}
                         rows={3}
-                        className={`w-full px-3 py-2 bg-white/10 backdrop-blur-md border rounded-lg text-white placeholder-gray-300 focus:outline-none focus:border-violet-400 transition-colors resize-none ${
+                        className={`w-full px-3 py-2 bg-white/10 backdrop-blur-md border rounded-lg text-white placeholder-gray-300 focus:outline-none focus:border-violet-400 transition-colors resize-none font-mono ${
                           errors[`hiddenInput${index}`] ? 'border-red-500' : 'border-white/20'
                         }`}
-                        placeholder="Enter input"
+                        placeholder="Example: 10  or  5 10 15  or  2&#10;hello&#10;world"
                       />
+                      {testCase.input && (testCase.input.includes('[') || testCase.input.includes('=')) && (
+                        <p className="text-yellow-400 text-xs mt-1">⚠️ Warning: Avoid brackets or = signs. Use simple space-separated values.</p>
+                      )}
                       {errors[`hiddenInput${index}`] && <p className="text-red-400 text-sm mt-1">{errors[`hiddenInput${index}`]}</p>}
                     </div>
 

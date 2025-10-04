@@ -566,6 +566,12 @@ const ChallengeRoom = () => {
                 </select>
               </div>
               
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-4 text-xs">
+                <p className="text-green-300">
+                  ✅ <strong>Input sanitization enabled:</strong> Test inputs are automatically cleaned (brackets and commas removed) for easier parsing.
+                </p>
+              </div>
+              
               <textarea
                 value={code}
                 onChange={(e) => setCode(e.target.value)}

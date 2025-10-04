@@ -417,11 +417,11 @@ const ProblemSolver = () => {
                   The test input shown below will be passed as stdin to your program.
                 </p>
               </div>
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
-                <p className="text-yellow-300 text-sm">
-                  ⚠️ <strong>Notice:</strong> If input shows brackets like <code className="bg-black/30 px-1 rounded">[2, 2, 1]</code>, 
-                  your stdin will receive the <strong>exact string</strong> <code className="bg-black/30 px-1 rounded">[2, 2, 1]</code> including brackets. 
-                  You must parse it accordingly (remove brackets, split by comma, convert to integers).
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-4">
+                <p className="text-green-300 text-sm">
+                  ✅ <strong>Good news:</strong> Input sanitization is enabled! If test input shows brackets like <code className="bg-black/30 px-1 rounded">[2, 2, 1]</code>, 
+                  it will be automatically cleaned to <code className="bg-black/30 px-1 rounded">2 2 1</code> before being passed to your program. 
+                  You can use simple parsing like <code className="bg-black/30 px-1 rounded">list(map(int, input().split()))</code> in Python.
                 </p>
               </div>
               <div className="space-y-4">
@@ -497,21 +497,20 @@ const ProblemSolver = () => {
                 <pre className="text-yellow-200 bg-black/30 p-2 rounded mt-1 text-xs overflow-x-auto">
 {`import sys
 data = sys.stdin.read().strip()
-# If input is "[2, 2, 1]", parse it:
-data = data.strip('[]')  # Remove brackets
-arr = list(map(int, data.split(', ')))
+# Input is automatically sanitized, so you can use simple parsing:
+arr = list(map(int, data.split()))
 print(sum(arr))`}</pre>
               )}
               {selectedLanguage === 'JavaScript' && (
                 <pre className="text-yellow-200 bg-black/30 p-2 rounded mt-1 text-xs overflow-x-auto">
 {`const fs = require('fs');
 const input = fs.readFileSync(0, 'utf8').trim();
-// If input is "[2, 2, 1]", parse it:
-const arr = input.slice(1, -1).split(', ').map(Number);
+// Input is automatically sanitized, so you can use simple parsing:
+const arr = input.split(' ').map(Number);
 console.log(arr.reduce((a,b) => a+b, 0));`}</pre>
               )}
               {(selectedLanguage === 'Java' || selectedLanguage === 'C++' || selectedLanguage === 'C') && (
-                <p className="text-yellow-200 text-xs">Read the full stdin string and parse accordingly (remove brackets, split by delimiter)</p>
+                <p className="text-yellow-200 text-xs">Input is automatically sanitized, so you can use simple parsing (split by spaces)</p>
               )}
             </div>
             <textarea
@@ -525,11 +524,11 @@ console.log(arr.reduce((a,b) => a+b, 0));`}</pre>
 
 Basic template for ${selectedLanguage}:
 ${
-                selectedLanguage === 'JavaScript' ? 'const fs = require("fs");\nconst input = fs.readFileSync(0, "utf8").trim();\n// Parse input here\nconsole.log(result);' :
-                selectedLanguage === 'Python' ? 'import sys\ndata = sys.stdin.read().strip()\n# Parse data here\nprint(result)' :
-                selectedLanguage === 'Java' ? 'import java.util.Scanner;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    // Read and parse input\n    System.out.println(result);\n  }\n}' :
-                selectedLanguage === 'C++' ? '#include <iostream>\nusing namespace std;\nint main() {\n  // Read and parse input\n  cout << result;\n  return 0;\n}' :
-                selectedLanguage === 'C' ? '#include <stdio.h>\nint main() {\n  // Read and parse input\n  printf("%d", result);\n  return 0;\n}' :
+                selectedLanguage === 'JavaScript' ? 'const fs = require("fs");\nconst input = fs.readFileSync(0, "utf8").trim();\n// Input is sanitized, use simple parsing\nconst arr = input.split(" ").map(Number);\nconsole.log(result);' :
+                selectedLanguage === 'Python' ? 'import sys\ndata = sys.stdin.read().strip()\n# Input is sanitized, use simple parsing\narr = list(map(int, data.split()))\nprint(result)' :
+                selectedLanguage === 'Java' ? 'import java.util.Scanner;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    // Input is sanitized, use simple parsing\n    System.out.println(result);\n  }\n}' :
+                selectedLanguage === 'C++' ? '#include <iostream>\nusing namespace std;\nint main() {\n  // Input is sanitized, use simple parsing\n  cout << result;\n  return 0;\n}' :
+                selectedLanguage === 'C' ? '#include <stdio.h>\nint main() {\n  // Input is sanitized, use simple parsing\n  printf("%d", result);\n  return 0;\n}' :
                 'Read from stdin, process, write to stdout'
               }`}
               spellCheck={false}

@@ -242,6 +242,11 @@ const DSASheet = () => {
               <div className="text-center">
                 <h2 className="text-2xl font-bold text-white mb-4">Choose a Topic to Start</h2>
                 <p className="text-gray-300">Select any topic to view problems and track your progress</p>
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mt-4 max-w-2xl mx-auto">
+                  <p className="text-green-300 text-sm">
+                    ✅ <strong>Input sanitization enabled:</strong> Test inputs are automatically cleaned for easier parsing with simple methods like <code className="bg-black/30 px-1 rounded">list(map(int, input().split()))</code>
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">

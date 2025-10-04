@@ -16,14 +16,23 @@ export const API_BASE_URL = (() => {
     const isEnvLocalhost = /^(http|https):\/\/localhost(?::\d+)?/i.test(trimmedEnv);
     const isProdHost = isBrowser && window.location && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
     if (!isEnvLocalhost || !isProdHost) {
+      console.log('Using environment API URL:', trimmedEnv);
       return trimmedEnv;
     }
     // Ignore localhost env in production; fall through to origin
   }
 
+  // Production fallback - use Render backend URL
+  if (isBrowser && window.location && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    console.log('Using production API URL: https://skypad-ide.onrender.com/api');
+    return 'https://skypad-ide.onrender.com/api';
+  }
+
   if (origin) {
+    console.log('Using origin-based API URL:', `${origin}/api`);
     return `${origin}/api`;
   }
+  console.log('Using localhost API URL: http://localhost:5000/api');
   return 'http://localhost:5000/api';
 })();
 

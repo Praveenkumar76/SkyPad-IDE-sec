@@ -41,24 +41,123 @@ const ChallengeRoom = () => {
 
   useEffect(() => {
     initializeRoom();
-    loadProblems();
+    
+    // Test API connection first
+    const testAPI = async () => {
+      try {
+        console.log('Testing API connection...');
+        const response = await fetch(`${API_BASE_URL}/problems`);
+        console.log('API test response:', response.status);
+        if (response.ok) {
+          console.log('API is working, loading problems...');
+          loadProblems();
+        } else {
+          console.error('API test failed:', response.status);
+          loadProblems(); // Still try to load problems
+        }
+      } catch (error) {
+        console.error('API test error:', error);
+        loadProblems(); // Still try to load problems
+      }
+    };
+    
+    testAPI();
+    
+    // Handle browser back button
+    const handleBeforeUnload = () => {
+      if (room && room.status === 'waiting' && players.length < 2) {
+        localStorage.removeItem(`challengeRoom_${roomId}`);
+      }
+    };
+    
+    // Periodic room sync to keep players in sync
+    const syncInterval = setInterval(() => {
+      const savedRoom = localStorage.getItem(`challengeRoom_${roomId}`);
+      if (savedRoom) {
+        const roomData = JSON.parse(savedRoom);
+        
+        // Check if room has expired
+        if (roomData.status === 'ended' || 
+            (roomData.waitingEndsAt && new Date(roomData.waitingEndsAt).getTime() < Date.now()) ||
+            (roomData.challengeEndsAt && new Date(roomData.challengeEndsAt).getTime() < Date.now())) {
+          localStorage.removeItem(`challengeRoom_${roomId}`);
+          alert('This room has expired or ended.');
+          navigate('/challenges');
+          return;
+        }
+        
+        // Update local state if room data has changed
+        if (JSON.stringify(roomData.players) !== JSON.stringify(players)) {
+          setPlayers(roomData.players || []);
+        }
+        if (roomData.selectedProblem && !selectedProblem) {
+          setSelectedProblem(roomData.selectedProblem);
+          setIsWaiting(false);
+          setIsChallengeActive(true);
+        }
+        if (JSON.stringify(roomData.scores) !== JSON.stringify(scores)) {
+          setScores(roomData.scores || {});
+        }
+      }
+    }, 2000); // Sync every 2 seconds
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
     
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (challengeIntervalRef.current) clearInterval(challengeIntervalRef.current);
+      clearInterval(syncInterval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [roomId]);
+  }, [roomId, room, players, selectedProblem, scores]);
 
   const initializeRoom = () => {
     // Check if this is a new room creation or joining existing room
     const savedRoom = localStorage.getItem(`challengeRoom_${roomId}`);
+    const currentUserId = localStorage.getItem('userId');
+    
     if (savedRoom) {
       const roomData = JSON.parse(savedRoom);
+      
+      // Check if room has expired
+      if (roomData.status === 'ended' || 
+          (roomData.waitingEndsAt && new Date(roomData.waitingEndsAt).getTime() < Date.now()) ||
+          (roomData.challengeEndsAt && new Date(roomData.challengeEndsAt).getTime() < Date.now())) {
+        // Room has expired, clear it and redirect
+        localStorage.removeItem(`challengeRoom_${roomId}`);
+        alert('This room has expired or ended.');
+        navigate('/challenges');
+        return;
+      }
+      
       setRoom(roomData);
       setRoomName(roomData.name);
-      setIsHost(roomData.host === localStorage.getItem('userId'));
+      setIsHost(roomData.host === currentUserId);
       setPlayers(roomData.players || []);
       setScores(roomData.scores || {});
+      
+      // Check if current user is already in the room
+      const isUserInRoom = roomData.players?.some(player => player.id === currentUserId);
+      
+      if (!isUserInRoom && roomData.players?.length < 2) {
+        // User is joining existing room
+        const newPlayer = {
+          id: currentUserId,
+          name: localStorage.getItem('userName') || 'Player',
+          email: localStorage.getItem('userEmail') || '',
+          joinedAt: new Date().toISOString()
+        };
+        
+        const updatedPlayers = [...(roomData.players || []), newPlayer];
+        const updatedRoom = {
+          ...roomData,
+          players: updatedPlayers
+        };
+        
+        setPlayers(updatedPlayers);
+        setRoom(updatedRoom);
+        localStorage.setItem(`challengeRoom_${roomId}`, JSON.stringify(updatedRoom));
+      }
       
       // Restore waiting countdown without restarting
       if (!roomData.selectedProblem && roomData.waitingEndsAt) {
@@ -84,9 +183,9 @@ const ChallengeRoom = () => {
       const newRoom = {
         id: roomId,
         name: `Room ${roomId.substring(0, 8)}`,
-        host: localStorage.getItem('userId'),
+        host: currentUserId,
         players: [{
-          id: localStorage.getItem('userId'),
+          id: currentUserId,
           name: localStorage.getItem('userName') || 'Player',
           email: localStorage.getItem('userEmail') || '',
           joinedAt: new Date().toISOString()
@@ -109,24 +208,57 @@ const ChallengeRoom = () => {
     }
   };
 
-  const loadProblems = async () => {
+  const loadProblems = async (retryCount = 0) => {
     try {
       setLoadingProblems(true);
+      console.log('Loading problems from:', `${API_BASE_URL}/problems`);
+      
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(`${API_BASE_URL}/problems`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        headers,
+        method: 'GET'
       });
+      
+      console.log('Problems response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
-        setProblems(data || []);
+        console.log('Loaded problems response:', data);
+        
+        // Backend returns { problems: [...], totalPages, currentPage, total }
+        // Extract the problems array
+        const problemsArray = data.problems || data || [];
+        console.log('Extracted problems array:', problemsArray);
+        console.log('Problems array length:', problemsArray.length);
+        setProblems(problemsArray);
       } else {
-        console.error('Failed to load problems');
+        const errorText = await response.text();
+        console.error('Failed to load problems:', response.status, response.statusText, errorText);
+        
+        // Retry once if it's a network error
+        if (retryCount < 1 && (response.status === 0 || response.status >= 500)) {
+          console.log('Retrying problems load...');
+          setTimeout(() => loadProblems(retryCount + 1), 2000);
+          return;
+        }
+        
         setProblems([]);
       }
     } catch (error) {
       console.error('Error loading problems:', error);
+      
+      // Retry once if it's a network error
+      if (retryCount < 1) {
+        console.log('Retrying problems load due to error...');
+        setTimeout(() => loadProblems(retryCount + 1), 2000);
+        return;
+      }
+      
       setProblems([]);
     } finally {
       setLoadingProblems(false);
@@ -138,11 +270,13 @@ const ChallengeRoom = () => {
       const remaining = Math.max(0, Math.floor((new Date(endsAtIso).getTime() - Date.now()) / 1000));
       setWaitingTime(remaining);
       if (remaining <= 0) {
-          clearInterval(intervalRef.current);
-          if (players.length < 2) {
-            alert('No one joined the challenge. Room will be closed.');
-            navigate('/challenges');
-          }
+        clearInterval(intervalRef.current);
+        if (players.length < 2) {
+          // Room expired, clear cache and redirect
+          localStorage.removeItem(`challengeRoom_${roomId}`);
+          alert('No one joined the challenge. Room will be closed.');
+          navigate('/challenges');
+        }
       }
     }, 1000);
   };
@@ -152,8 +286,8 @@ const ChallengeRoom = () => {
       const remaining = Math.max(0, Math.floor((new Date(endsAtIso).getTime() - Date.now()) / 1000));
       setChallengeTime(remaining);
       if (remaining <= 0) {
-          clearInterval(challengeIntervalRef.current);
-          endChallenge();
+        clearInterval(challengeIntervalRef.current);
+        endChallenge();
       }
     }, 1000);
   };
@@ -340,6 +474,12 @@ const ChallengeRoom = () => {
       endedAt: new Date().toISOString()
     };
     localStorage.setItem(`challengeRoom_${roomId}`, JSON.stringify(updatedRoom));
+    
+    // Auto-redirect after 5 seconds
+    setTimeout(() => {
+      localStorage.removeItem(`challengeRoom_${roomId}`);
+      navigate('/challenges');
+    }, 5000);
   };
 
   const copyRoomId = () => {
@@ -380,7 +520,13 @@ const ChallengeRoom = () => {
             <div className="flex items-center space-x-4">
               {/* Back Button */}
               <button
-                onClick={() => navigate('/challenges')}
+                onClick={() => {
+                  // Clear room cache when leaving
+                  if (room && room.status === 'waiting' && players.length < 2) {
+                    localStorage.removeItem(`challengeRoom_${roomId}`);
+                  }
+                  navigate('/challenges');
+                }}
                 className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
                 title="Back to Challenges"
               >
@@ -403,7 +549,11 @@ const ChallengeRoom = () => {
                 <span>Copy Room ID</span>
               </button>
               <button
-                onClick={() => navigate('/challenges')}
+                onClick={() => {
+                  // Clear room cache when exiting
+                  localStorage.removeItem(`challengeRoom_${roomId}`);
+                  navigate('/challenges');
+                }}
                 className="bg-red-500/20 hover:bg-red-500/30 text-red-300 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
               >
                 <MdExitToApp className="w-4 h-4" />
@@ -490,20 +640,42 @@ const ChallengeRoom = () => {
         </div>
 
         {/* Problem Selection */}
-        {isWaiting && isHost && (
+        {isWaiting && (
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
-            <h3 className="text-xl font-semibold text-white mb-4">Select a Problem</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-xl font-semibold text-white">
+                  {isHost ? 'Select a Problem' : 'Waiting for Host to Select Problem'}
+                </h3>
+                <div className="text-gray-400 text-sm mt-1">
+                  {loadingProblems ? 'Loading...' : `${problems.length} problems available`}
+                </div>
+              </div>
+              <button
+                onClick={loadProblems}
+                disabled={loadingProblems}
+                className="flex items-center space-x-2 px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg border border-white/20 transition-colors disabled:opacity-50"
+              >
+                <MdRefresh className={`w-4 h-4 ${loadingProblems ? 'animate-spin' : ''}`} />
+                <span className="text-sm">Refresh</span>
+              </button>
+            </div>
             {loadingProblems ? (
               <div className="text-center py-8">
                 <div className="text-gray-300">Loading problems...</div>
+                <div className="text-gray-500 text-sm mt-2">Please wait while we fetch the problems...</div>
               </div>
             ) : problems && problems.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {problems.map((problem) => (
                 <div
                   key={problem._id}
-                  onClick={() => selectProblem(problem)}
-                  className="bg-white/5 hover:bg-white/10 rounded-lg p-4 border border-white/20 hover:border-violet-400/50 cursor-pointer transition-all duration-300"
+                  onClick={() => isHost && selectProblem(problem)}
+                  className={`rounded-lg p-4 border transition-all duration-300 ${
+                    isHost 
+                      ? 'bg-white/5 hover:bg-white/10 border-white/20 hover:border-violet-400/50 cursor-pointer' 
+                      : 'bg-white/5 border-white/10 cursor-not-allowed opacity-60'
+                  }`}
                 >
                   <h4 className="text-white font-medium mb-2">{problem.title}</h4>
                   <p className="text-gray-300 text-sm mb-2 line-clamp-2">{problem.description}</p>
@@ -525,6 +697,46 @@ const ChallengeRoom = () => {
             ) : (
               <div className="text-center py-8">
                 <div className="text-gray-300">No problems available</div>
+                <div className="text-gray-500 text-sm mt-2">
+                  Please check your internet connection and try refreshing the page.
+                </div>
+                <div className="mt-4 space-x-4">
+                  <button
+                    onClick={() => loadProblems()}
+                    className="px-4 py-2 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 rounded-lg transition-colors"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Load sample problems as fallback
+                      const sampleProblems = [
+                        {
+                          _id: 'sample-1',
+                          title: 'Two Sum',
+                          description: 'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.',
+                          difficulty: 'Easy',
+                          constraints: '2 <= nums.length <= 10^4',
+                          allowedLanguages: ['JavaScript', 'Python', 'Java', 'C++'],
+                          tags: ['Array', 'Hash Table']
+                        },
+                        {
+                          _id: 'sample-2',
+                          title: 'Add Two Numbers',
+                          description: 'You are given two non-empty linked lists representing two non-negative integers.',
+                          difficulty: 'Medium',
+                          constraints: 'The number of nodes in each linked list is in the range [1, 100].',
+                          allowedLanguages: ['JavaScript', 'Python', 'Java', 'C++'],
+                          tags: ['Linked List', 'Math']
+                        }
+                      ];
+                      setProblems(sampleProblems);
+                    }}
+                    className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-lg transition-colors"
+                  >
+                    Use Sample Problems
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -632,7 +844,11 @@ const ChallengeRoom = () => {
               ))}
             </div>
             <button
-              onClick={() => navigate('/challenges')}
+              onClick={() => {
+                // Clear room cache when leaving
+                localStorage.removeItem(`challengeRoom_${roomId}`);
+                navigate('/challenges');
+              }}
               className="mt-6 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105"
             >
               Back to Challenges

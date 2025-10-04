@@ -13,6 +13,7 @@ import DSASheet from './components/DSASheet';
 import Challenges from './components/Challenges';
 import Rewards from './components/Rewards';
 import ChallengeRoom from './components/ChallengeRoom';
+import CreateContest from './components/CreateContest';
 import InterviewExamine from './components/InterviewExamine';
 import './App.css';
 
@@ -56,6 +57,7 @@ function App() {
           <Route path="/challenges" element={<Challenges />} />
           <Route path="/rewards" element={<Rewards />} />
           <Route path="/challenge-room/:roomId" element={<ChallengeRoom />} />
+          <Route path="/create-contest" element={<CreateContest />} />
           <Route path="/interview-examine" element={<InterviewExamineRedirect />} />
           <Route path="/interview-examine/:sessionId" element={<InterviewExamineRedirect />} />
           <Route path="/interv-examine" element={<InterviewExamine />} />

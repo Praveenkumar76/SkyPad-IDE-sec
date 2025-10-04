@@ -40,7 +40,7 @@ const Problems = () => {
   const [isSolved, setIsSolved] = useState(false);
   
   // Resizable panel state
-  const [panelHeight, setPanelHeight] = useState(300);
+  const [panelHeight, setPanelHeight] = useState(250);
   const [isDragging, setIsDragging] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const dragRef = useRef(null);
@@ -278,7 +278,7 @@ const Problems = () => {
   const handleMouseMove = (e) => {
     if (!isDragging) return;
     const deltaY = startYRef.current - e.clientY;
-    const newHeight = Math.max(200, Math.min(600, startHeightRef.current + deltaY));
+    const newHeight = Math.max(150, Math.min(400, startHeightRef.current + deltaY));
     setPanelHeight(newHeight);
   };
 
@@ -288,13 +288,47 @@ const Problems = () => {
     document.removeEventListener('mouseup', handleMouseUp);
   };
 
-  // Auto-close pairs for code editor
+  // Enhanced code editor with indentation and syntax highlighting
   const handleEditorKeyDown = (e) => {
     const target = e.target;
     const start = target.selectionStart;
     const end = target.selectionEnd;
     const value = code;
 
+    // Handle Tab key for indentation
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const tab = '  '; // 2 spaces for indentation
+      const newValue = value.slice(0, start) + tab + value.slice(end);
+      setCode(newValue);
+      requestAnimationFrame(() => {
+        target.selectionStart = start + tab.length;
+        target.selectionEnd = start + tab.length;
+      });
+      return;
+    }
+
+    // Handle Enter key for auto-indentation
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const lines = value.slice(0, start).split('\n');
+      const currentLine = lines[lines.length - 1];
+      const indent = currentLine.match(/^(\s*)/)[0];
+      
+      // Auto-indent for C++/Java/C (after { or :)
+      const shouldIndent = /[{}:]\s*$/.test(currentLine.trim());
+      const newIndent = shouldIndent ? indent + '  ' : indent;
+      
+      const newValue = value.slice(0, start) + '\n' + newIndent + value.slice(end);
+      setCode(newValue);
+      requestAnimationFrame(() => {
+        target.selectionStart = start + 1 + newIndent.length;
+        target.selectionEnd = start + 1 + newIndent.length;
+      });
+      return;
+    }
+
+    // Auto-close pairs
     const pairs = {
       '(': ')',
       '[': ']',
@@ -329,6 +363,48 @@ const Problems = () => {
     }
   };
 
+  // Syntax highlighting function
+  const getSyntaxHighlightedCode = (code, language) => {
+    if (!code) return '';
+    
+    const keywords = {
+      'cpp': ['#include', 'using', 'namespace', 'std', 'int', 'main', 'return', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'const', 'static', 'void', 'bool', 'char', 'string', 'vector', 'cin', 'cout', 'endl'],
+      'c': ['#include', 'int', 'main', 'return', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'const', 'static', 'void', 'char', 'printf', 'scanf'],
+      'java': ['public', 'class', 'static', 'void', 'main', 'String', 'int', 'boolean', 'char', 'double', 'float', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'return', 'import', 'package'],
+      'python': ['def', 'class', 'if', 'else', 'elif', 'for', 'while', 'try', 'except', 'finally', 'with', 'as', 'import', 'from', 'return', 'yield', 'lambda', 'and', 'or', 'not', 'in', 'is', 'True', 'False', 'None'],
+      'javascript': ['function', 'const', 'let', 'var', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue', 'return', 'class', 'extends', 'import', 'export', 'from', 'async', 'await', 'try', 'catch', 'finally']
+    };
+
+    const lang = language.toLowerCase().replace('c++', 'cpp');
+    const langKeywords = keywords[lang] || [];
+    
+    return code.split('\n').map(line => {
+      let highlightedLine = line;
+      
+      // Highlight keywords
+      langKeywords.forEach(keyword => {
+        const regex = new RegExp(`\\b${keyword}\\b`, 'g');
+        highlightedLine = highlightedLine.replace(regex, `<span class="keyword">${keyword}</span>`);
+      });
+      
+      // Highlight strings
+      highlightedLine = highlightedLine.replace(/(["'`])((?:\\.|(?!\1)[^\\])*?)\1/g, '<span class="string">$1$2$1</span>');
+      
+      // Highlight comments
+      if (lang === 'cpp' || lang === 'c' || lang === 'java' || lang === 'javascript') {
+        highlightedLine = highlightedLine.replace(/\/\/.*$/g, '<span class="comment">$&</span>');
+        highlightedLine = highlightedLine.replace(/\/\*[\s\S]*?\*\//g, '<span class="comment">$&</span>');
+      } else if (lang === 'python') {
+        highlightedLine = highlightedLine.replace(/#.*$/g, '<span class="comment">$&</span>');
+      }
+      
+      // Highlight numbers
+      highlightedLine = highlightedLine.replace(/\b\d+\.?\d*\b/g, '<span class="number">$&</span>');
+      
+      return highlightedLine;
+    }).join('\n');
+  };
+
   const filteredProblems = problems.filter(problem => {
     const matchesSearch = problem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          problem.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -350,7 +426,25 @@ const Problems = () => {
   // LeetCode-style layout
   if (selectedProblem) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-violet-900/20 to-black flex flex-col">
+      <>
+        {/* Syntax highlighting styles */}
+        <style jsx>{`
+          .keyword {
+            color: #c792ea;
+            font-weight: bold;
+          }
+          .string {
+            color: #c3e88d;
+          }
+          .comment {
+            color: #676e95;
+            font-style: italic;
+          }
+          .number {
+            color: #f78c6c;
+          }
+        `}</style>
+        <div className="min-h-screen bg-gradient-to-br from-black via-violet-900/20 to-black flex flex-col">
         {/* Top Navigation Bar */}
         <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -434,6 +528,14 @@ const Problems = () => {
                   <span>{isSubmitting ? 'Submitting...' : 'Submit'}</span>
                 </>
               )}
+            </button>
+            <button
+              onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
+              className="px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-300 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white hover:scale-105"
+              title={isPanelCollapsed ? "Show test results" : "Hide test results"}
+            >
+              {isPanelCollapsed ? <MdExpandMore className="w-5 h-5" /> : <MdExpandLess className="w-5 h-5" />}
+              <span>{isPanelCollapsed ? 'Show Results' : 'Hide Results'}</span>
             </button>
             <DashboardNavbar />
           </div>
@@ -574,12 +676,21 @@ console.log(result);`}</pre>
                     <p className="text-yellow-200 text-xs">Input is automatically sanitized, use simple parsing (split by spaces)</p>
                   )}
                 </div>
-                <textarea
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  onKeyDown={handleEditorKeyDown}
-                  className="flex-1 w-full bg-black/30 text-white font-mono text-sm p-4 rounded-lg border border-white/20 focus:outline-none focus:border-violet-400 resize-none"
-                  placeholder={`Write your ${selectedLanguage} solution here...
+                <div className="flex-1 w-full bg-black/30 rounded-lg border border-white/20 focus-within:border-violet-400 relative">
+                  {/* Syntax highlighted background */}
+                  <div 
+                    className="absolute inset-0 p-4 font-mono text-sm text-transparent pointer-events-none whitespace-pre-wrap overflow-hidden"
+                    dangerouslySetInnerHTML={{ 
+                      __html: getSyntaxHighlightedCode(code, selectedLanguage) 
+                    }}
+                  />
+                  {/* Actual textarea */}
+                  <textarea
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    onKeyDown={handleEditorKeyDown}
+                    className="w-full h-full bg-transparent text-white font-mono text-sm p-4 rounded-lg border-none focus:outline-none resize-none relative z-10"
+                    placeholder={`Write your ${selectedLanguage} solution here...
 
 📖 Tip: Check the yellow hint box above for a working example!
 
@@ -592,8 +703,13 @@ ${
                     selectedLanguage === 'C' ? '#include <stdio.h>\nint main() {\n  // Input is sanitized, use simple parsing\n  printf("%d", result);\n  return 0;\n}' :
                     'Read from stdin, process, write to stdout'
                   }`}
-                  spellCheck={false}
-                />
+                    spellCheck={false}
+                    style={{ 
+                      color: 'transparent',
+                      caretColor: 'white'
+                    }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -742,6 +858,7 @@ ${
           </div>
         </div>
       </div>
+      </>
     );
   }
 

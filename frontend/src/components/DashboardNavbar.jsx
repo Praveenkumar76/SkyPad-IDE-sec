@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   MdHome,
@@ -23,6 +23,7 @@ const DashboardNavbar = () => {
   const [userProfilePicture, setUserProfilePicture] = useState(localStorage.getItem('userProfilePicture') || '');
   const navigate = useNavigate();
   const location = useLocation();
+  const navRef = useRef(null);
 
   useEffect(() => {
     const name = localStorage.getItem('userName') || 'User';
@@ -34,6 +35,23 @@ const DashboardNavbar = () => {
     setUserAvatar(avatar);
     setUserProfilePicture(profilePicture);
   }, []);
+
+  // Click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (navRef.current && !navRef.current.contains(event.target)) {
+        setIsNavOpen(false);
+      }
+    };
+
+    if (isNavOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isNavOpen]);
 
   const handleLogout = () => {
     // Close the dropdown
@@ -58,7 +76,7 @@ const DashboardNavbar = () => {
   };
 
   return (
-    <div className="relative z-[9999]">
+    <div className="relative z-[9999]" ref={navRef}>
       <button 
         onClick={() => setIsNavOpen(!isNavOpen)}
         className="flex items-center space-x-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
@@ -83,7 +101,13 @@ const DashboardNavbar = () => {
       
       {/* Profile Dropdown Navigation */}
       {isNavOpen && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 shadow-2xl z-[9999]">
+        <>
+          {/* Backdrop overlay */}
+          <div 
+            className="fixed inset-0 bg-black/20 z-[999998]"
+            onClick={() => setIsNavOpen(false)}
+          />
+          <div className="fixed top-16 right-4 w-64 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 shadow-2xl z-[999999]">
           <div className="space-y-4">
             {/* Dashboard Title */}
             <h1 className="text-xl font-bold text-white mb-4">{userName}</h1>
@@ -180,6 +204,7 @@ const DashboardNavbar = () => {
             </div>
           </div>
         </div>
+        </>
       )}
       
       {/* Logout Success Popup */}

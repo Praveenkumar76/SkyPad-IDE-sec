@@ -9,7 +9,9 @@ import {
   MdPlayArrow,
   MdCode,
   MdAssignment,
-  MdArrowBack
+  MdArrowBack,
+  MdAdd,
+  MdCreate
 } from 'react-icons/md';
 
 const Challenges = () => {
@@ -197,7 +199,7 @@ const Challenges = () => {
 
           {/* Challenges Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {challenges[activeTab]?.map((challenge) => (
+            {(challenges[activeTab] || []).map((challenge) => (
               <div
                 key={challenge.id}
                 className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:border-violet-400/50 transition-all duration-300 hover:scale-105 group"
@@ -415,6 +417,28 @@ const Challenges = () => {
                 </div>
               </div>
 
+              {/* Create Contest */}
+              <div className="mt-8">
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20 hover:border-violet-400/50 transition-all duration-300 text-center">
+                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-4xl mb-6">
+                    🏆
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-4">Create Contest</h3>
+                  <p className="text-gray-300 mb-6">
+                    Create a comprehensive coding contest with multiple problems, time limits, and leaderboards
+                  </p>
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => navigate('/create-contest')}
+                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center space-x-2"
+                    >
+                      <MdCreate className="w-5 h-5" />
+                      <span>Create Contest</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Active Duels */}
               <div className="mt-8">
                 <h3 className="text-xl font-semibold text-white mb-4">Active Duels</h3>
@@ -429,7 +453,7 @@ const Challenges = () => {
           )}
 
           {/* Empty State */}
-          {activeTab !== 'one-vs-one' && challenges[activeTab].length === 0 && (
+          {activeTab !== 'one-vs-one' && activeTab !== 'contest' && (challenges[activeTab] || []).length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-400 text-xl mb-4">
                 No {activeTab} challenges available

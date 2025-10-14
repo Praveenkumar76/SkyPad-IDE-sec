@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import DashboardNavbar from './DashboardNavbar';
 import BackButton from './BackButton';
 import { dsaSheetData } from '../data/dsaSheetData';
+import io from 'socket.io-client';
 import { 
   MdTimer, 
   MdPerson, 
@@ -42,36 +43,119 @@ const ChallengeRoom = () => {
   
   const intervalRef = useRef(null);
   const challengeIntervalRef = useRef(null);
+  const socketRef = useRef(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    // Setup socket connection
+    const socket = io('http://localhost:3002', { transports: ['websocket'] });
+    socketRef.current = socket;
+
+    socket.on('connect', () => setIsConnected(true));
+    socket.on('disconnect', () => setIsConnected(false));
+
+    // Handle room/player events
+    socket.on('player-joined', ({ player, players: playerList }) => {
+      if (player) {
+        setPlayers((prev) => {
+          const exists = prev.some(p => p.id === player.id);
+          const next = exists ? prev : [...prev, player];
+          return next;
+        });
+      }
+      if (playerList && playerList.length) {
+        // Sync full list when provided
+        setPlayers(playerList);
+      }
+      // If I'm the host, share the current room state to the newly joined peer
+      if (isHost && room) {
+        try { socketRef.current?.emit('room-state', { roomId, state: room }); } catch {}
+      }
+    });
+
+    socket.on('player-left', ({ players: playerList }) => {
+      if (Array.isArray(playerList)) setPlayers(playerList);
+    });
+
+    // Challenge room coordination
+    socket.on('room-state', ({ state }) => {
+      if (!state) return;
+      setRoom(state);
+      setRoomName(state.name || roomName);
+      setPlayers(state.players || players);
+      setScores(state.scores || scores);
+      if (state.selectedProblem) setSelectedProblem(state.selectedProblem);
+    });
+
+    socket.on('problem-selected', ({ problem }) => {
+      if (problem) {
+        setSelectedProblem(problem);
+        setShowWaitingForPlayers(true);
+        setShowProblemSelection(false);
+      }
+    });
+
+    socket.on('challenge-start', ({ startAt, duration, problem }) => {
+      if (problem) setSelectedProblem(problem);
+      setIsWaiting(false);
+      setIsChallengeActive(true);
+      setShowWaitingForPlayers(false);
+      setShowProblemSelection(false);
+      // Sync timer based on server-provided startAt/duration
+      const now = Date.now();
+      const remaining = Math.max(0, Math.floor((startAt + duration * 1000 - now) / 1000));
+      setChallengeTime(remaining);
+      if (challengeIntervalRef.current) clearInterval(challengeIntervalRef.current);
+      startChallengeTimer();
+    });
+
+    socket.on('score-update', ({ playerId, score }) => {
+      if (!playerId || !score) return;
+      setScores((prev) => ({ ...prev, [playerId]: score }));
+    });
+
+    socket.on('challenge-end', ({ winnerId, scores: finalScores }) => {
+      if (finalScores) setScores(finalScores);
+      setWinner(winnerId);
+      setIsChallengeActive(false);
+      setIsChallengeEnded(true);
+    });
+
     initializeRoom();
     loadProblems();
     
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (challengeIntervalRef.current) clearInterval(challengeIntervalRef.current);
+      try {
+        socket.emit('leave-room', { roomId });
+      } catch {}
+      socket.close();
     };
   }, [roomId]);
 
   const initializeRoom = () => {
     // Check if this is a new room creation or joining existing room
     const savedRoom = localStorage.getItem(`challengeRoom_${roomId}`);
+    const currentUserId = localStorage.getItem('userId');
+    const player = {
+      id: currentUserId,
+      name: localStorage.getItem('userName') || 'Player',
+      email: localStorage.getItem('userEmail') || '',
+      joinedAt: new Date().toISOString()
+    };
+
     if (savedRoom) {
+      // Return to an existing room from this browser
       const roomData = JSON.parse(savedRoom);
       setRoom(roomData);
       setRoomName(roomData.name);
-      setIsHost(roomData.host === localStorage.getItem('userId'));
+      setIsHost(roomData.host === currentUserId);
       setPlayers(roomData.players || []);
       setScores(roomData.scores || {});
       
-      // Check if current user is already in the room
-      const currentUserId = localStorage.getItem('userId');
-      const isUserInRoom = roomData.players?.some(player => player.id === currentUserId);
-      
-      if (!isUserInRoom) {
-        // User is joining an existing room
-        joinRoom();
-      }
+      // Join the socket.io room to enable real-time sync
+      try { socketRef.current?.emit('join-room', { roomId, player }); } catch {}
       
       if (roomData.status === 'active' && roomData.selectedProblem) {
         setSelectedProblem(roomData.selectedProblem);
@@ -84,38 +168,51 @@ const ChallengeRoom = () => {
         setShowWaitingForPlayers(true);
         setShowProblemSelection(false);
         startWaitingTimer();
-      } else if (roomData.status === 'waiting' && isHost) {
+      } else if (roomData.status === 'waiting' && (roomData.host === currentUserId)) {
         setShowProblemSelection(true);
       } else if (roomData.status === 'waiting') {
         setShowWaitingForPlayers(true);
       }
     } else {
-      // Create new room
-      const roomName = localStorage.getItem(`roomName_${roomId}`) || `Room ${roomId.substring(0, 8)}`;
-      const newRoom = {
-        id: roomId,
-        name: roomName,
-        host: localStorage.getItem('userId'),
-        players: [{
-          id: localStorage.getItem('userId'),
-          name: localStorage.getItem('userName') || 'Player',
-          email: localStorage.getItem('userEmail') || '',
-          joinedAt: new Date().toISOString()
-        }],
-        status: 'waiting', // waiting, active, ended
-        createdAt: new Date().toISOString(),
-        selectedProblem: null,
-        scores: {}
-      };
-      
-      setRoom(newRoom);
-      setRoomName(newRoom.name);
-      setIsHost(true);
-      setPlayers(newRoom.players);
-      localStorage.setItem(`challengeRoom_${roomId}`, JSON.stringify(newRoom));
-      
-      // Show problem selection for host
-      setShowProblemSelection(true);
+      // Determine create vs join using the presence of a prepared room name
+      const nameFromStorage = localStorage.getItem(`roomName_${roomId}`);
+      if (nameFromStorage) {
+        // Creator flow: first arrival becomes host and selects a problem
+        const newRoom = {
+          id: roomId,
+          name: nameFromStorage,
+          host: currentUserId,
+          players: [player],
+          status: 'waiting',
+          createdAt: new Date().toISOString(),
+          selectedProblem: null,
+          scores: {}
+        };
+        setRoom(newRoom);
+        setRoomName(newRoom.name);
+        setIsHost(true);
+        setPlayers(newRoom.players);
+        localStorage.setItem(`challengeRoom_${roomId}`, JSON.stringify(newRoom));
+        // Join socket room and broadcast initial state to any listeners
+        try {
+          socketRef.current?.emit('join-room', { roomId, player });
+          socketRef.current?.emit('room-state', { roomId, state: newRoom });
+        } catch {}
+        // Show problem selection for host only
+        setShowProblemSelection(true);
+        setShowWaitingForPlayers(false);
+      } else {
+        // Guest flow: join an existing room and wait for host state
+        setIsHost(false);
+        setShowProblemSelection(false);
+        setShowWaitingForPlayers(true);
+        setPlayers([]);
+        setScores({});
+        setRoom({ id: roomId, status: 'waiting' });
+        try {
+          socketRef.current?.emit('join-room', { roomId, player });
+        } catch {}
+      }
     }
   };
 
@@ -155,7 +252,10 @@ const ChallengeRoom = () => {
           difficulty: problem.difficulty,
           tags: [problem.difficulty.toLowerCase()],
           constraints: problem.problem?.constraints || 'No specific constraints',
-          allowedLanguages: problem.problem?.allowedLanguages || ['JavaScript', 'Python', 'Java', 'C++']
+          allowedLanguages: problem.problem?.allowedLanguages || ['JavaScript', 'Python', 'Java', 'C++'],
+          // Include testcases if present for proper local evaluation
+          sampleTestCases: problem.problem?.sampleTestCases || [],
+          hiddenTestCases: problem.problem?.hiddenTestCases || []
         });
       });
     });
@@ -172,19 +272,14 @@ const ChallengeRoom = () => {
     }
   };
 
+  // Optional: legacy waiting timer (not used for auto-start)
   const startWaitingTimer = () => {
-    setWaitingTime(120); // Reset to 2 minutes
+    setWaitingTime(120);
+    if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
       setWaitingTime(prev => {
         if (prev <= 1) {
           clearInterval(intervalRef.current);
-          if (players.length < 2) {
-            alert('No one joined the challenge. Room will be closed.');
-            navigate('/challenges');
-          } else {
-            // Start challenge with 10 seconds countdown
-            startChallengeCountdown();
-          }
           return 0;
         }
         return prev - 1;
@@ -192,8 +287,9 @@ const ChallengeRoom = () => {
     }, 1000);
   };
 
-  const startChallengeCountdown = () => {
-    setWaitingTime(10); // 10 seconds countdown
+  const startChallengeCountdown = (seconds = 3) => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setWaitingTime(seconds);
     intervalRef.current = setInterval(() => {
       setWaitingTime(prev => {
         if (prev <= 1) {
@@ -211,7 +307,8 @@ const ChallengeRoom = () => {
     setIsChallengeActive(true);
     setShowWaitingForPlayers(false);
     setShowProblemSelection(false);
-    setChallengeTime(getChallengeTimeByDifficulty(selectedProblem.difficulty));
+    const duration = getChallengeTimeByDifficulty(selectedProblem.difficulty);
+    setChallengeTime(duration);
     
     const updatedRoom = {
       ...room,
@@ -220,11 +317,19 @@ const ChallengeRoom = () => {
     };
     setRoom(updatedRoom);
     localStorage.setItem(`challengeRoom_${roomId}`, JSON.stringify(updatedRoom));
+
+    // Broadcast the official start time to synchronize timers
+    const startAt = Date.now();
+    try {
+      socketRef.current?.emit('challenge-start', { roomId, startAt, duration, problem: selectedProblem });
+      socketRef.current?.emit('room-state', { roomId, state: updatedRoom });
+    } catch {}
     
     startChallengeTimer();
   };
 
   const startChallengeTimer = () => {
+    if (challengeIntervalRef.current) clearInterval(challengeIntervalRef.current);
     challengeIntervalRef.current = setInterval(() => {
       setChallengeTime(prev => {
         if (prev <= 1) {
@@ -240,7 +345,6 @@ const ChallengeRoom = () => {
   const selectProblem = (problem) => {
     if (!isHost) return;
     
-    console.log('Selecting problem:', problem);
     setSelectedProblem(problem);
     setShowProblemSelection(false);
     setShowWaitingForPlayers(true);
@@ -253,82 +357,76 @@ const ChallengeRoom = () => {
     
     setRoom(updatedRoom);
     localStorage.setItem(`challengeRoom_${roomId}`, JSON.stringify(updatedRoom));
-    
-    // Start waiting for players (2 minutes)
-    startWaitingTimer();
-  };
 
-  const joinRoom = () => {
-    const newPlayer = {
-      id: localStorage.getItem('userId'),
-      name: localStorage.getItem('userName') || 'Player',
-      email: localStorage.getItem('userEmail') || '',
-      joinedAt: new Date().toISOString()
-    };
-    
-    const updatedPlayers = [...players, newPlayer];
-    setPlayers(updatedPlayers);
-    
-    const updatedRoom = {
-      ...room,
-      players: updatedPlayers
-    };
-    
-    setRoom(updatedRoom);
-    localStorage.setItem(`challengeRoom_${roomId}`, JSON.stringify(updatedRoom));
-    
-    // If problem is already selected, show waiting for players
-    if (room.selectedProblem) {
-      setShowWaitingForPlayers(true);
-      setShowProblemSelection(false);
+    // Broadcast selection to room
+    try {
+      socketRef.current?.emit('problem-selected', { roomId, problem });
+      socketRef.current?.emit('room-state', { roomId, state: updatedRoom });
+    } catch {}
+
+    // If both players are already here, auto-start a 3s countdown
+    if ((players?.length || 0) >= 2) {
+      startChallengeCountdown(3);
     }
   };
+
+  // Auto 3s countdown when both players present and a problem is selected (host only)
+  useEffect(() => {
+    if (isHost && room?.status === 'waiting' && selectedProblem && (players?.length || 0) >= 2) {
+      startChallengeCountdown(3);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHost, room?.status, selectedProblem, players.length]);
+
 
   const runCode = async () => {
     if (!code.trim() || !selectedProblem) return;
     
     setIsRunning(true);
     try {
-      // Simulate code execution for sample problems
-      const sampleResults = selectedProblem.sampleTestCases?.map(testCase => ({
-        input: testCase.input,
-        expectedOutput: testCase.expectedOutput,
-        actualOutput: `Sample output for ${testCase.input}`,
-        passed: Math.random() > 0.3 // Simulate some tests passing
-      })) || [];
-      
-      const hiddenResults = selectedProblem.hiddenTestCases?.map(testCase => ({
-        input: testCase.input,
-        expectedOutput: testCase.expectedOutput,
-        actualOutput: `Hidden output for ${testCase.input}`,
-        passed: Math.random() > 0.4 // Simulate some tests passing
-      })) || [];
-      
-      const result = {
-        sampleResults,
-        hiddenResults,
-        executionTime: Math.random() * 1000,
-        memoryUsed: Math.random() * 100
-      };
-      
+      const token = localStorage.getItem('token');
+      const lang = (selectedLanguage || 'JavaScript').toLowerCase();
+      const response = await fetch('http://localhost:5000/api/problems/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          problemId: selectedProblem._id || selectedProblem.id,
+          code,
+          language: lang,
+          // Provide inline testcases when using sample (non-DB) problems
+          problem: !selectedProblem._id ? {
+            sampleTestCases: selectedProblem.sampleTestCases || [],
+            hiddenTestCases: selectedProblem.hiddenTestCases || [],
+            allowedLanguages: selectedProblem.allowedLanguages || ['JavaScript', 'Python'],
+            timeLimit: 1000
+          } : undefined
+        })
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ message: 'Execution failed' }));
+        throw new Error(err.message || 'Execution failed');
+      }
+      const result = await response.json();
       setTestResults(result);
       
-      // Update scores
-      const totalTests = sampleResults.length + hiddenResults.length;
-      const passedTests = sampleResults.filter(t => t.passed).length + 
-                         hiddenResults.filter(t => t.passed).length;
+      // Update scores based on actual results
+      const totalTests = (result.sampleResults?.length || 0) + (result.hiddenResults?.length || 0);
+      const passedTests = [...(result.sampleResults || []), ...(result.hiddenResults || [])].filter(t => t.passed).length;
       
       const playerId = localStorage.getItem('userId');
+      const playerScore = {
+        passed: passedTests,
+        total: totalTests,
+        percentage: totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0,
+        lastUpdated: new Date().toISOString()
+      };
       const newScores = {
         ...scores,
-        [playerId]: {
-          passed: passedTests,
-          total: totalTests,
-          percentage: totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0,
-          lastUpdated: new Date().toISOString()
-        }
+        [playerId]: playerScore
       };
-      
       setScores(newScores);
       
       // Update room with new scores
@@ -337,9 +435,15 @@ const ChallengeRoom = () => {
         scores: newScores
       };
       localStorage.setItem(`challengeRoom_${roomId}`, JSON.stringify(updatedRoom));
+
+      // Broadcast score update
+      try {
+        socketRef.current?.emit('score-update', { roomId, playerId, score: playerScore });
+      } catch {}
       
     } catch (error) {
       console.error('Error running code:', error);
+      alert(error.message || 'Execution failed');
     } finally {
       setIsRunning(false);
     }
@@ -353,15 +457,19 @@ const ChallengeRoom = () => {
       // Run code first to get results
       await runCode();
       
-      // Check if all tests pass
-      const totalTests = (testResults?.sampleResults?.length || 0) + (testResults?.hiddenResults?.length || 0);
-      const passedTests = (testResults?.sampleResults?.filter(t => t.passed).length || 0) + 
-                         (testResults?.hiddenResults?.filter(t => t.passed).length || 0);
+      // Recalculate from latest testResults state after runCode
+      const res = testResults;
+      const totalTests = (res?.sampleResults?.length || 0) + (res?.hiddenResults?.length || 0);
+      const passedTests = [...(res?.sampleResults || []), ...(res?.hiddenResults || [])].filter(t => t.passed).length;
       
       if (passedTests === totalTests && totalTests > 0) {
         // All tests passed - this player wins!
         const playerId = localStorage.getItem('userId');
         setWinner(playerId);
+        // Broadcast end of challenge to both users
+        try {
+          socketRef.current?.emit('challenge-end', { roomId, winnerId: playerId, scores });
+        } catch {}
         endChallenge();
       } else {
         alert(`Only ${passedTests}/${totalTests} tests passed. Keep trying!`);
@@ -426,6 +534,12 @@ const ChallengeRoom = () => {
     alert('Room ID copied to clipboard!');
   };
 
+  const copyJoinLink = () => {
+    const url = `${window.location.origin}/challenge-room/${roomId}`;
+    navigator.clipboard.writeText(url);
+    alert('Join link copied!');
+  };
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -466,6 +580,15 @@ const ChallengeRoom = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {isHost && (
+                <button
+                  onClick={copyJoinLink}
+                  className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                >
+                  <MdCopyAll className="w-4 h-4" />
+                  <span>Copy Join Link</span>
+                </button>
+              )}
               <button
                 onClick={copyRoomId}
                 className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
@@ -549,7 +672,7 @@ const ChallengeRoom = () => {
         </div>
 
         {/* Problem Selection - Only show when host needs to select */}
-        {showProblemSelection && (
+        {showProblemSelection && isHost && (
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-white">Select a Problem</h3>
@@ -607,6 +730,14 @@ const ChallengeRoom = () => {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Guest waiting hint - before the host selects a problem */}
+        {!isHost && room?.status === 'waiting' && !selectedProblem && (
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-6">
+            <h3 className="text-xl font-semibold text-white mb-1">Waiting for host...</h3>
+            <p className="text-gray-300">The host is selecting a problem. You’ll see a 3-second countdown when it’s ready.</p>
           </div>
         )}
 

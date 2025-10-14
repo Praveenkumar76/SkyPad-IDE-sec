@@ -177,57 +177,148 @@ router.get('/my/problems', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/problems/run - Execute code against test cases
+// POST /api/problems/run - Execute code against test cases (Python and JavaScript supported)
 router.post('/run', authenticateToken, async (req, res) => {
+  const { spawn } = require('child_process');
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+
+  function trimOutput(s) {
+    return String(s ?? '')
+      .replace(/\r/g, '')
+      .replace(/\n+$/g, '')
+      .trim();
+  }
+
+  async function runOnce({ lang, code, input, timeLimitMs }) {
+    return new Promise((resolve) => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skypad-'));
+      let filePath;
+      let child;
+      let stdout = '';
+      let stderr = '';
+      let timedOut = false;
+
+      try {
+        if (lang === 'python') {
+          filePath = path.join(tmpDir, 'Main.py');
+          fs.writeFileSync(filePath, code, 'utf8');
+          child = spawn('python', [filePath], { stdio: ['pipe', 'pipe', 'pipe'] });
+        } else if (lang === 'javascript' || lang === 'js') {
+          filePath = path.join(tmpDir, 'main.js');
+          fs.writeFileSync(filePath, code, 'utf8');
+          child = spawn(process.execPath, [filePath], { stdio: ['pipe', 'pipe', 'pipe'] });
+        } else {
+          return resolve({ success: false, output: '', error: 'Language not supported', timeMs: 0, memory: 0 });
+        }
+      } catch (err) {
+        return resolve({ success: false, output: '', error: err.message, timeMs: 0, memory: 0 });
+      }
+
+      const start = Date.now();
+      const to = setTimeout(() => {
+        timedOut = true;
+        try { child.kill('SIGKILL'); } catch {}
+      }, Math.max(1000, timeLimitMs || 3000));
+
+      child.stdout.on('data', (d) => (stdout += d.toString()));
+      child.stderr.on('data', (d) => (stderr += d.toString()));
+
+      child.on('error', (err) => {
+        clearTimeout(to);
+        resolve({ success: false, output: '', error: err.message, timeMs: Date.now() - start, memory: 0 });
+      });
+
+      child.on('close', (codeExit) => {
+        clearTimeout(to);
+        const elapsed = Date.now() - start;
+        if (timedOut) {
+          resolve({ success: false, output: trimOutput(stdout), error: 'Time Limit Exceeded', timeMs: elapsed, memory: 0 });
+        } else if (codeExit !== 0 && stderr) {
+          resolve({ success: false, output: trimOutput(stdout), error: trimOutput(stderr), timeMs: elapsed, memory: 0 });
+        } else {
+          resolve({ success: true, output: trimOutput(stdout), error: '', timeMs: elapsed, memory: 0 });
+        }
+      });
+
+      // Write input and end
+      if (input != null) {
+        child.stdin.write(String(input));
+      }
+      child.stdin.end();
+    });
+  }
+
   try {
     const { problemId, code, language } = req.body;
-    
     if (!problemId || !code || !language) {
       return res.status(400).json({ message: 'problemId, code, and language are required' });
     }
 
-    const problem = await Problem.findOne({ _id: problemId, isActive: true });
+    let problem = await Problem.findOne({ _id: problemId, isActive: true });
+
+    // Fallback: allow on-the-fly problem payload for non-DB problems
     if (!problem) {
-      return res.status(404).json({ message: 'Problem not found' });
+      const p = req.body.problem || {};
+      const sample = req.body.sampleTestCases || p.sampleTestCases || [];
+      const hidden = req.body.hiddenTestCases || p.hiddenTestCases || [];
+      const allowed = p.allowedLanguages || req.body.allowedLanguages || ['JavaScript', 'Python'];
+      problem = {
+        timeLimit: p.timeLimit || 1000,
+        sampleTestCases: sample,
+        hiddenTestCases: hidden,
+        allowedLanguages: allowed
+      };
     }
 
-    if (!problem.allowedLanguages.includes(language)) {
+    const lang = String(language).toLowerCase();
+    const allowedLower = (problem.allowedLanguages || ['JavaScript', 'Python']).map(l => String(l).toLowerCase());
+    if (!allowedLower.includes(lang)) {
       return res.status(400).json({ message: 'Language not supported for this problem' });
     }
 
-    // Mock execution results (in a real app, you'd use a code execution service)
-    const sampleResults = problem.sampleTestCases.map((testCase, index) => {
-      // Simple mock: if code contains "return", it passes
-      const passed = code.includes('return') || code.includes('print') || code.includes('cout');
-      return {
-        input: testCase.input,
-        expectedOutput: testCase.output,
-        actualOutput: passed ? testCase.output : 'Wrong answer',
-        passed
-      };
-    });
+    const timeLimitMs = (problem.timeLimit || 1000);
+    const sampleCases = Array.isArray(problem.sampleTestCases) ? problem.sampleTestCases : [];
+    const hiddenCases = Array.isArray(problem.hiddenTestCases) ? problem.hiddenTestCases : [];
 
-    const hiddenResults = problem.hiddenTestCases.map((testCase, index) => {
-      // Simple mock: if code contains "return", it passes
-      const passed = code.includes('return') || code.includes('print') || code.includes('cout');
-      return {
-        input: testCase.input,
-        expectedOutput: testCase.output,
-        actualOutput: passed ? testCase.output : 'Wrong answer',
-        passed
-      };
-    });
+    async function evaluate(cases) {
+      const results = [];
+      for (const tc of cases) {
+        const input = tc.input ?? tc.stdin ?? '';
+        const expected = trimOutput(tc.output ?? tc.expectedOutput ?? '');
+        const execRes = await runOnce({ lang, code, input, timeLimitMs });
+        const actual = trimOutput(execRes.output);
+        const passed = execRes.success && actual === expected;
+        results.push({
+          input,
+          expectedOutput: expected,
+          actualOutput: actual,
+          passed,
+          error: execRes.error || undefined,
+          timeMs: execRes.timeMs
+        });
+        // Early stop on obvious runtime error for user feedback
+        if (!execRes.success && execRes.error && execRes.error !== 'Time Limit Exceeded') {
+          // Continue evaluating others? Keep going to show more, but it's fine to continue
+        }
+      }
+      return results;
+    }
+
+    const sampleResults = await evaluate(sampleCases);
+    const hiddenResults = await evaluate(hiddenCases);
 
     const totalTests = sampleResults.length + hiddenResults.length;
     const passedTests = [...sampleResults, ...hiddenResults].filter(r => r.passed).length;
-    const score = Math.round((passedTests / totalTests) * 100);
+    const score = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
 
     res.json({
       sampleResults,
       hiddenResults,
       score,
-      executionTime: Math.random() * 1000, // Mock execution time
-      memoryUsed: Math.random() * 100 // Mock memory usage
+      executionTime: sampleResults.reduce((a, r) => a + (r.timeMs || 0), 0),
+      memoryUsed: 0
     });
   } catch (error) {
     console.error('Code execution error:', error);

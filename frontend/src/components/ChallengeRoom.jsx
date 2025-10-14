@@ -40,6 +40,7 @@ const ChallengeRoom = () => {
   const [testResults, setTestResults] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [problemsError, setProblemsError] = useState(false);
+  const [execOutput, setExecOutput] = useState('');
   
   const intervalRef = useRef(null);
   const challengeIntervalRef = useRef(null);
@@ -411,6 +412,17 @@ const ChallengeRoom = () => {
       }
       const result = await response.json();
       setTestResults(result);
+
+      // Build output log
+      const details = [];
+      const renderTests = (arr, label) => {
+        (arr || []).forEach((t, idx) => {
+          details.push(`[${label} ${idx + 1}]\nInput:\n${t.input ?? ''}\nExpected:\n${t.expectedOutput ?? ''}\nActual:\n${t.actualOutput ?? ''}\nResult: ${t.passed ? 'PASS' : 'FAIL'}\n`);
+        });
+      };
+      renderTests(result.sampleResults, 'Sample');
+      renderTests(result.hiddenResults, 'Hidden');
+      setExecOutput(details.join('\n'));
       
       // Update scores based on actual results
       const totalTests = (result.sampleResults?.length || 0) + (result.hiddenResults?.length || 0);
@@ -443,6 +455,7 @@ const ChallengeRoom = () => {
       
     } catch (error) {
       console.error('Error running code:', error);
+      setExecOutput(`Execution error: ${error.message || 'failed'}`);
       alert(error.message || 'Execution failed');
     } finally {
       setIsRunning(false);
@@ -834,18 +847,21 @@ const ChallengeRoom = () => {
                 </button>
               </div>
 
-              {/* Test Results */}
-              {testResults && (
-                <div className="mt-4 space-y-2">
-                  <h4 className="text-white font-medium">Test Results:</h4>
-                  <div className="text-sm text-gray-300">
-                    Sample Tests: {testResults.sampleResults?.filter(t => t.passed).length || 0}/{testResults.sampleResults?.length || 0} passed
-                  </div>
-                  <div className="text-sm text-gray-300">
-                    Hidden Tests: {testResults.hiddenResults?.filter(t => t.passed).length || 0}/{testResults.hiddenResults?.length || 0} passed
-                  </div>
+              {/* Integrated Output Panel */}
+              <div className="mt-4 bg-black/30 border border-white/20 rounded-lg overflow-hidden">
+                <div className="px-4 py-2 border-b border-white/10 flex items-center justify-between">
+                  <h4 className="text-white font-medium">Output</h4>
+                  {testResults && (
+                    <div className="text-xs text-gray-300">
+                      Sample: {testResults.sampleResults?.filter(t => t.passed).length || 0}/{testResults.sampleResults?.length || 0} •
+                      Hidden: {testResults.hiddenResults?.filter(t => t.passed).length || 0}/{testResults.hiddenResults?.length || 0}
+                    </div>
+                  )}
                 </div>
-              )}
+                <div className="max-h-64 overflow-auto p-4 bg-black/20">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-200">{execOutput || 'Run the code to see output and per-test details here.'}</pre>
+                </div>
+              </div>
             </div>
           </div>
         )}

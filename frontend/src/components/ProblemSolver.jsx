@@ -1,4 +1,3 @@
-import { API_BASE_URL } from '../utils/api';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -10,8 +9,7 @@ import {
   MdTimer,
   MdMemory,
   MdTag,
-  MdPerson,
-  MdRefresh
+  MdPerson
 } from 'react-icons/md';
 import { dsaSheetData } from '../data/dsaSheetData';
 
@@ -36,13 +34,35 @@ const ProblemSolver = () => {
     { value: 'C', label: 'C', extension: 'c' }
   ];
 
-  // Editor starts empty; users must write full solutions themselves
   const defaultCode = {
-    JavaScript: '',
-    Python: '',
-    Java: '',
-    'C++': '',
-    C: ''
+    'JavaScript': `function solve(input) {
+    // Write your solution here
+    return input;
+}`,
+    'Python': `def solve(input):
+    # Write your solution here
+    return input`,
+    'Java': `public class Solution {
+    public String solve(String input) {
+        // Write your solution here
+        return input;
+    }
+}`,
+    'C++': `#include <iostream>
+#include <string>
+using namespace std;
+
+string solve(string input) {
+    // Write your solution here
+    return input;
+}`,
+    'C': `#include <stdio.h>
+#include <string.h>
+
+char* solve(char* input) {
+    // Write your solution here
+    return input;
+}`
   };
 
   useEffect(() => {
@@ -61,68 +81,47 @@ const ProblemSolver = () => {
     }
   }, [selectedLanguage, problem]);
 
-  // Auto-close pairs for (), {}, [], '', "", ``
-  const handleEditorKeyDown = (e) => {
-    const target = e.target;
-    const start = target.selectionStart;
-    const end = target.selectionEnd;
-    const value = code;
-
-    const pairs = {
-      '(': ')',
-      '[': ']',
-      '{': '}',
-      '"': '"',
-      "'": "'",
-      '`': '`'
-    };
-
-    const key = e.key;
-    if (pairs[key]) {
-      e.preventDefault();
-      const insert = key + pairs[key];
-      const newValue = value.slice(0, start) + insert + value.slice(end);
-      setCode(newValue);
-      // place cursor between the pair
-      requestAnimationFrame(() => {
-        target.selectionStart = start + 1;
-        target.selectionEnd = start + 1;
-      });
-      return;
-    }
-
-    // If closing char typed and exactly next char matches, just move cursor over it
-    const closers = new Set(Object.values(pairs));
-    if (closers.has(key)) {
-      if (value[end] === key && start === end) {
-        e.preventDefault();
-        requestAnimationFrame(() => {
-          target.selectionStart = start + 1;
-          target.selectionEnd = start + 1;
-        });
-      }
-    }
-  };
-
   const fetchProblem = async () => {
     try {
-      // Always fetch from DATABASE API (single source of truth)
-      const response = await fetch(`${API_BASE_URL}/problems/${id}`);
+      // Check if it's a DSA sheet problem first
+      const dsaProblem = findDSAProblem(id);
+      if (dsaProblem) {
+        setProblem(dsaProblem.problem);
+        if (dsaProblem.problem.allowedLanguages.length > 0) {
+          setSelectedLanguage(dsaProblem.problem.allowedLanguages[0]);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Otherwise fetch from API
+      const response = await fetch(`http://localhost:5000/api/problems/${id}`);
       if (!response.ok) {
         throw new Error('Problem not found');
       }
       const data = await response.json();
       setProblem(data);
-      if (data.allowedLanguages && data.allowedLanguages.length > 0) {
+      if (data.allowedLanguages.length > 0) {
         setSelectedLanguage(data.allowedLanguages[0]);
       }
-      console.log('Problem loaded from database:', data.title);
     } catch (err) {
       setError('Failed to load problem');
       console.error('Error fetching problem:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const findDSAProblem = (problemId) => {
+    // Search through all DSA sheet problems
+    for (const topicId in dsaSheetData.problems) {
+      const problems = dsaSheetData.problems[topicId];
+      const problem = problems.find(p => p.id === problemId);
+      if (problem) {
+        return problem;
+      }
+    }
+    return null;
   };
 
   const runCode = async () => {
@@ -136,7 +135,7 @@ const ProblemSolver = () => {
     setTestResults(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/problems/run`, {
+      const response = await fetch('http://localhost:5000/api/problems/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,7 +173,7 @@ const ProblemSolver = () => {
 
     try {
       // First run the code to check if it passes all tests
-      const runResponse = await fetch(`${API_BASE_URL}/problems/run`, {
+      const runResponse = await fetch('http://localhost:5000/api/problems/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -197,30 +196,12 @@ const ProblemSolver = () => {
       const allTestsPass = [...runResult.sampleResults, ...runResult.hiddenResults].every(test => test.passed);
       
       if (allTestsPass) {
-        // Mark as solved in localStorage
+        // Mark as solved
         const solvedProblems = JSON.parse(localStorage.getItem('solvedProblems') || '[]');
         if (!solvedProblems.includes(id)) {
           solvedProblems.push(id);
           localStorage.setItem('solvedProblems', JSON.stringify(solvedProblems));
         }
-        
-        // Sync with backend
-        try {
-          await fetch(`${API_BASE_URL}/users/solved`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-              problemId: id,
-              language: selectedLanguage
-            })
-          });
-        } catch (syncError) {
-          console.error('Failed to sync solved status with backend:', syncError);
-        }
-        
         setIsSubmitted(true);
         setTestResults(runResult);
         alert('Congratulations! Problem solved successfully! 🎉');
@@ -321,14 +302,6 @@ const ProblemSolver = () => {
               ))}
             </select>
             <button
-              onClick={() => setCode('')}
-              className="px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-300 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white hover:scale-105"
-              title="Reset code editor"
-            >
-              <MdRefresh className="w-5 h-5" />
-              <span>Reset</span>
-            </button>
-            <button
               onClick={runCode}
               disabled={isRunning || !code.trim()}
               className={`px-6 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-300 ${
@@ -369,20 +342,6 @@ const ProblemSolver = () => {
         {/* Problem Description */}
         <div className="w-1/2 p-6 overflow-y-auto">
           <div className="space-y-6">
-            {/* Input/Output Guide */}
-            <div className="bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/30 rounded-xl p-4 mb-4">
-              <h3 className="text-violet-300 font-semibold mb-2 flex items-center space-x-2">
-                <MdCode className="w-4 h-4" />
-                <span>How to Read Input & Print Output</span>
-              </h3>
-              <div className="text-sm text-gray-300 space-y-1">
-                <p>• Your program receives input via <strong className="text-white">standard input (stdin)</strong></p>
-                <p>• You must print output to <strong className="text-white">standard output (stdout)</strong></p>
-                <p>• Test inputs are passed exactly as shown (e.g., <code className="bg-black/40 px-1 rounded">1</code> or <code className="bg-black/40 px-1 rounded">1, 2, 3, 4</code>)</p>
-                <p>• Parse the input as needed for your solution</p>
-              </div>
-            </div>
-
             {/* Problem Info */}
             <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
               <div className="flex items-center justify-between mb-4">
@@ -411,36 +370,21 @@ const ProblemSolver = () => {
             {/* Sample Test Cases */}
             <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
               <h3 className="text-lg font-semibold text-white mb-4">Sample Test Cases</h3>
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
-                <p className="text-blue-300 text-sm">
-                  💡 <strong>Important:</strong> Your program should read from <code className="bg-black/30 px-2 py-1 rounded">stdin</code> and write to <code className="bg-black/30 px-2 py-1 rounded">stdout</code>. 
-                  The test input shown below will be passed as stdin to your program.
-                </p>
-              </div>
-              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-4">
-                <p className="text-green-300 text-sm">
-                  ✅ <strong>Good news:</strong> Input sanitization is enabled! If test input shows brackets like <code className="bg-black/30 px-1 rounded">[2, 2, 1]</code>, 
-                  it will be automatically cleaned to <code className="bg-black/30 px-1 rounded">2 2 1</code> before being passed to your program. 
-                  You can use simple parsing like <code className="bg-black/30 px-1 rounded">list(map(int, input().split()))</code> in Python.
-                </p>
-              </div>
               <div className="space-y-4">
                 {problem.sampleTestCases.map((testCase, index) => (
                   <div key={index} className="bg-black/20 rounded-lg p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-400 mb-2">Input (stdin):</h4>
-                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border font-mono">
+                        <h4 className="text-sm font-medium text-gray-400 mb-2">Input:</h4>
+                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border">
                           {testCase.input}
                         </pre>
-                        <p className="text-xs text-gray-500 mt-1">Your program receives this exact string</p>
                       </div>
                       <div>
-                        <h4 className="text-sm font-medium text-gray-400 mb-2">Expected Output (stdout):</h4>
-                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border font-mono">
+                        <h4 className="text-sm font-medium text-gray-400 mb-2">Expected Output:</h4>
+                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border">
                           {testCase.output}
                         </pre>
-                        <p className="text-xs text-gray-500 mt-1">Your program should print this</p>
                       </div>
                     </div>
                     {testCase.explanation && (
@@ -488,49 +432,12 @@ const ProblemSolver = () => {
             </div>
           </div>
 
-          <div className="flex-1 p-4 flex flex-col">
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-2 text-xs">
-              <p className="text-yellow-300 mb-2">
-                <strong>📝 Reading stdin in {selectedLanguage}:</strong>
-              </p>
-              {selectedLanguage === 'Python' && (
-                <pre className="text-yellow-200 bg-black/30 p-2 rounded mt-1 text-xs overflow-x-auto">
-{`import sys
-data = sys.stdin.read().strip()
-# Input is automatically sanitized, so you can use simple parsing:
-arr = list(map(int, data.split()))
-print(sum(arr))`}</pre>
-              )}
-              {selectedLanguage === 'JavaScript' && (
-                <pre className="text-yellow-200 bg-black/30 p-2 rounded mt-1 text-xs overflow-x-auto">
-{`const fs = require('fs');
-const input = fs.readFileSync(0, 'utf8').trim();
-// Input is automatically sanitized, so you can use simple parsing:
-const arr = input.split(' ').map(Number);
-console.log(arr.reduce((a,b) => a+b, 0));`}</pre>
-              )}
-              {(selectedLanguage === 'Java' || selectedLanguage === 'C++' || selectedLanguage === 'C') && (
-                <p className="text-yellow-200 text-xs">Input is automatically sanitized, so you can use simple parsing (split by spaces)</p>
-              )}
-            </div>
+          <div className="flex-1 p-4">
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              onKeyDown={handleEditorKeyDown}
-              className="flex-1 w-full bg-black/30 text-white font-mono text-sm p-4 rounded-lg border border-white/20 focus:outline-none focus:border-violet-400 resize-none"
-              placeholder={`Write your ${selectedLanguage} solution here...
-
-📖 Tip: Check the yellow hint box above for a working example!
-
-Basic template for ${selectedLanguage}:
-${
-                selectedLanguage === 'JavaScript' ? 'const fs = require("fs");\nconst input = fs.readFileSync(0, "utf8").trim();\n// Input is sanitized, use simple parsing\nconst arr = input.split(" ").map(Number);\nconsole.log(result);' :
-                selectedLanguage === 'Python' ? 'import sys\ndata = sys.stdin.read().strip()\n# Input is sanitized, use simple parsing\narr = list(map(int, data.split()))\nprint(result)' :
-                selectedLanguage === 'Java' ? 'import java.util.Scanner;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    // Input is sanitized, use simple parsing\n    System.out.println(result);\n  }\n}' :
-                selectedLanguage === 'C++' ? '#include <iostream>\nusing namespace std;\nint main() {\n  // Input is sanitized, use simple parsing\n  cout << result;\n  return 0;\n}' :
-                selectedLanguage === 'C' ? '#include <stdio.h>\nint main() {\n  // Input is sanitized, use simple parsing\n  printf("%d", result);\n  return 0;\n}' :
-                'Read from stdin, process, write to stdout'
-              }`}
+              className="w-full h-full bg-black/30 text-white font-mono text-sm p-4 rounded-lg border border-white/20 focus:outline-none focus:border-violet-400 resize-none"
+              placeholder={`Write your ${selectedLanguage} solution here...`}
               spellCheck={false}
             />
           </div>
@@ -539,75 +446,40 @@ ${
           {testResults && (
             <div className="border-t border-white/10 p-4 bg-black/20">
               <h4 className="text-lg font-semibold text-white mb-3">Test Results</h4>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {testResults.sampleResults?.map((result, index) => (
-                  <div key={index} className="bg-black/30 rounded-lg p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        {getTestResultIcon(result.passed)}
-                        <span className="text-white">Sample Test {index + 1}</span>
-                      </div>
-                      <div className={`text-sm ${result.passed ? 'text-green-400' : 'text-red-400'}`}>
-                        {result.passed ? 'Passed' : 'Failed'}
-                      </div>
+                  <div key={index} className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {getTestResultIcon(result.passed)}
+                      <span className="text-white">Sample Test {index + 1}</span>
                     </div>
-                    {!result.passed && (
-                      <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                        <div>
-                          <div className="text-gray-400 mb-1">Input</div>
-                          <pre className="bg-black/40 border rounded p-2 text-gray-200 whitespace-pre-wrap">{result.input}</pre>
-                        </div>
-                        <div>
-                          <div className="text-gray-400 mb-1">Expected</div>
-                          <pre className="bg-black/40 border rounded p-2 text-gray-200 whitespace-pre-wrap">{result.expectedOutput}</pre>
-                        </div>
-                        <div>
-                          <div className="text-gray-400 mb-1">Your Output</div>
-                          <pre className="bg-black/40 border rounded p-2 text-gray-200 whitespace-pre-wrap">{result.actualOutput}</pre>
-                        </div>
-                      </div>
-                    )}
+                    <div className="text-sm text-gray-300">
+                      {result.passed ? 'Passed' : 'Failed'}
+                    </div>
                   </div>
                 ))}
-
                 {testResults.hiddenResults && (
-                  <div className="mt-2 space-y-2">
-                    <h5 className="text-sm font-medium text-gray-400">Hidden Tests</h5>
-                    {testResults.hiddenResults.map((result, index) => (
-                      <div key={index} className="bg-black/30 rounded-lg p-3">
-                        <div className="flex items-center justify-between">
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium text-gray-400 mb-2">Hidden Tests:</h5>
+                    <div className="space-y-1">
+                      {testResults.hiddenResults.map((result, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-black/30 rounded-lg">
                           <div className="flex items-center space-x-3">
                             {getTestResultIcon(result.passed)}
                             <span className="text-white text-sm">Hidden Test {index + 1}</span>
                           </div>
-                          <div className={`text-sm ${result.passed ? 'text-green-400' : 'text-red-400'}`}>
+                          <div className="text-sm text-gray-300">
                             {result.passed ? 'Passed' : 'Failed'}
                           </div>
                         </div>
-                        {!result.passed && (
-                          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                            <div>
-                              <div className="text-gray-400 mb-1">Input</div>
-                              <pre className="bg-black/40 border rounded p-2 text-gray-200 whitespace-pre-wrap">{result.input}</pre>
-                            </div>
-                            <div>
-                              <div className="text-gray-400 mb-1">Expected</div>
-                              <pre className="bg-black/40 border rounded p-2 text-gray-200 whitespace-pre-wrap">{result.expectedOutput}</pre>
-                            </div>
-                            <div>
-                              <div className="text-gray-400 mb-1">Your Output</div>
-                              <pre className="bg-black/40 border rounded p-2 text-gray-200 whitespace-pre-wrap">{result.actualOutput}</pre>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
-
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-400">
-                  <div>Score: <span className="text-white">{testResults.score || 0}%</span></div>
-                  <div className="text-right">Time: {Math.round(testResults.executionTime || 0)}ms · Memory: {Math.round(testResults.memoryUsed || 0)}MB</div>
+                <div className="mt-4 p-3 bg-violet-500/20 rounded-lg">
+                  <div className="text-center text-white font-medium">
+                    Score: {testResults.score || 0}%
+                  </div>
                 </div>
               </div>
             </div>

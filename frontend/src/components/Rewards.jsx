@@ -10,8 +10,7 @@ import {
   MdCheckCircle,
   MdLock,
   MdCode,
-  MdAssignment,
-  MdArrowBack
+  MdAssignment
 } from 'react-icons/md';
 
 const Rewards = () => {
@@ -164,22 +163,11 @@ const Rewards = () => {
         {/* Header */}
         <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {/* Back Button */}
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
-                title="Back to Dashboard"
-              >
-                <MdArrowBack className="w-6 h-6 text-white" />
-              </button>
-              
-              <div>
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
-                  Rewards & Shop
-                </h1>
-                <p className="text-gray-300 mt-2">Earn coins, unlock achievements, and shop for exclusive items</p>
-              </div>
+            <div>
+              <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
+                Rewards & Shop
+              </h1>
+              <p className="text-gray-300 mt-2">Earn coins, unlock achievements, and shop for exclusive items</p>
             </div>
             <div className="flex items-center space-x-4">
               {/* User Coins */}

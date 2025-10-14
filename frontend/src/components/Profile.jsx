@@ -1,6 +1,8 @@
-import { API_BASE_URL } from '../utils/api';
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BackButton from './BackButton';
+import { userActivityTracker } from '../utils/userActivityTracker';
+import { simulateUserActivity } from '../utils/simulateUserActivity';
 import { 
   MdEdit, 
   MdSave, 
@@ -41,36 +43,88 @@ const Profile = () => {
     joinDate: localStorage.getItem('userJoinDate') || '2024-01-15'
   });
 
-  // Statistics State
-  const [stats] = useState({
-    problemsSolved: 247,
-    winLossRatio: 0.78,
-    totalSubmissions: 156,
-    accuracy: 0.85,
-    currentStreak: 12,
-    longestStreak: 28,
-    rank: 156,
-    totalUsers: 15420,
-    contestsParticipated: 23,
-    contestsWon: 7,
-    averageRating: 1850,
-    maxRating: 2100
+  // Dynamic Statistics State
+  const [stats, setStats] = useState({
+    problemsSolved: 0,
+    winLossRatio: 0,
+    totalSubmissions: 0,
+    accuracy: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    rank: 0,
+    totalUsers: 0,
+    contestsParticipated: 0,
+    contestsWon: 0,
+    averageRating: 0,
+    maxRating: 0,
+    weeklyActivity: 0,
+    monthlyActivity: 0,
+    totalTimeSpent: 0,
+    favoriteTopic: 'Arrays',
+    lastActive: '2 hours ago'
   });
 
   // Performance Metrics
-  const [performanceData] = useState({
-    easy: { solved: 89, total: 95, percentage: 94 },
-    medium: { solved: 123, total: 180, percentage: 68 },
-    hard: { solved: 35, total: 85, percentage: 41 }
+  const [performanceData, setPerformanceData] = useState({
+    easy: { solved: 0, total: 0, percentage: 0 },
+    medium: { solved: 0, total: 0, percentage: 0 },
+    hard: { solved: 0, total: 0, percentage: 0 }
   });
 
   // Recent Activity
-  const [recentActivity] = useState([
-    { type: 'problem', title: 'Two Sum', difficulty: 'Easy', status: 'Solved', time: '2 hours ago' },
-    { type: 'contest', title: 'Weekly Contest 245', status: 'Ranked 156', time: '1 day ago' },
-    { type: 'achievement', title: 'Problem Solver', status: 'Unlocked', time: '2 days ago' },
-    { type: 'problem', title: 'Binary Tree Inorder', difficulty: 'Medium', status: 'Solved', time: '3 days ago' }
-  ]);
+  const [recentActivity, setRecentActivity] = useState([]);
+
+  // Load real user activity data from database
+  useEffect(() => {
+    const loadUserStats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.log('No token found, using default stats');
+          return;
+        }
+
+        // Fetch real user statistics from database
+        const [statsResponse, activityResponse] = await Promise.all([
+          fetch('http://localhost:5000/api/users/stats', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }),
+          fetch('http://localhost:5000/api/users/recent-activity', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+        ]);
+
+        if (statsResponse.ok) {
+          const realStats = await statsResponse.json();
+          setStats(realStats);
+          
+          // Update performance data from real stats
+          const realPerformance = {
+            easy: realStats.difficultyStats?.easy || { solved: 0, total: 100, percentage: 0 },
+            medium: realStats.difficultyStats?.medium || { solved: 0, total: 150, percentage: 0 },
+            hard: realStats.difficultyStats?.hard || { solved: 0, total: 80, percentage: 0 }
+          };
+          setPerformanceData(realPerformance);
+        }
+
+        if (activityResponse.ok) {
+          const realActivity = await activityResponse.json();
+          setRecentActivity(realActivity);
+        }
+      } catch (error) {
+        console.error('Failed to load user stats:', error);
+        // Fallback to default stats if API fails
+      }
+    };
+
+    loadUserStats();
+  }, []);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -86,7 +140,7 @@ const Profile = () => {
       });
       
       // Update backend
-      const response = await fetch(`${API_BASE_URL}/users/profile`, {
+      const response = await fetch('http://localhost:5000/api/users/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -174,13 +228,96 @@ const Profile = () => {
       case 'problem': return <MdCode className="w-5 h-5 text-blue-400" />;
       case 'contest': return <MdEmojiEvents className="w-5 h-5 text-purple-400" />;
       case 'achievement': return <MdStar className="w-5 h-5 text-yellow-400" />;
+      case 'streak': return <MdTrendingUp className="w-5 h-5 text-green-400" />;
       default: return <MdPerson className="w-5 h-5 text-gray-400" />;
+    }
+  };
+
+  // Function to add a test problem solve (for demonstration)
+  const addTestProblemSolve = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login to solve problems');
+        return;
+      }
+
+      const testProblems = [
+        { id: 'test-1', title: 'Palindrome Number', difficulty: 'Easy', topic: 'String', timeSpent: 15 },
+        { id: 'test-2', title: 'Longest Common Prefix', difficulty: 'Easy', topic: 'String', timeSpent: 20 },
+        { id: 'test-3', title: 'Valid Parentheses', difficulty: 'Easy', topic: 'Stack', timeSpent: 18 },
+        { id: 'test-4', title: 'Merge Intervals', difficulty: 'Medium', topic: 'Array', timeSpent: 35 },
+        { id: 'test-5', title: 'Binary Tree Level Order', difficulty: 'Medium', topic: 'Tree', timeSpent: 28 }
+      ];
+      
+      const randomProblem = testProblems[Math.floor(Math.random() * testProblems.length)];
+      
+      // Record problem solve in database
+      const response = await fetch('http://localhost:5000/api/users/solve-problem', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          problemId: randomProblem.id + '-' + Date.now(),
+          title: randomProblem.title,
+          difficulty: randomProblem.difficulty,
+          topic: randomProblem.topic,
+          timeSpent: randomProblem.timeSpent,
+          language: 'JavaScript'
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Problem solved! +${result.points} points`);
+        
+        // Refresh the stats from database
+        const [statsResponse, activityResponse] = await Promise.all([
+          fetch('http://localhost:5000/api/users/stats', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }),
+          fetch('http://localhost:5000/api/users/recent-activity', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+        ]);
+
+        if (statsResponse.ok) {
+          const realStats = await statsResponse.json();
+          setStats(realStats);
+          
+          const realPerformance = {
+            easy: realStats.difficultyStats?.easy || { solved: 0, total: 100, percentage: 0 },
+            medium: realStats.difficultyStats?.medium || { solved: 0, total: 150, percentage: 0 },
+            hard: realStats.difficultyStats?.hard || { solved: 0, total: 80, percentage: 0 }
+          };
+          setPerformanceData(realPerformance);
+        }
+
+        if (activityResponse.ok) {
+          const realActivity = await activityResponse.json();
+          setRecentActivity(realActivity);
+        }
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error solving problem:', error);
+      alert('Failed to solve problem. Please try again.');
     }
   };
 
   return (
     <div 
-      className="min-h-screen p-6 relative overflow-hidden"
+      className="min-h-screen pt-20 p-6 relative overflow-hidden"
       style={{
         background: `
           linear-gradient(135deg, #667eea 0%, #764ba2 100%),
@@ -205,15 +342,16 @@ const Profile = () => {
       <div className="relative z-10 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center space-x-2 text-white/70 hover:text-white transition-colors"
-          >
-            <MdArrowBack className="w-6 h-6" />
-            <span>Back to Dashboard</span>
-          </button>
+          <BackButton to="/dashboard" text="Back to Dashboard" />
           
           <div className="flex items-center space-x-4">
+            <button
+              onClick={addTestProblemSolve}
+              className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 px-4 py-2 rounded-lg border border-green-500/30 hover:from-green-500/30 hover:to-emerald-500/30 transition-all duration-300 flex items-center space-x-2"
+            >
+              <MdCode className="w-5 h-5" />
+              <span>Solve Test Problem</span>
+            </button>
             <button
               onClick={() => navigate('/code-editor')}
               className="bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-300 px-4 py-2 rounded-lg border border-violet-500/30 hover:from-violet-500/30 hover:to-purple-500/30 transition-all duration-300 flex items-center space-x-2"
@@ -427,6 +565,22 @@ const Profile = () => {
                   <span className="text-white/70">Global Rank</span>
                   <span className="text-purple-400 font-bold">#{stats.rank}</span>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/70">Weekly Activity</span>
+                  <span className="text-blue-400 font-bold">{stats.weeklyActivity} problems</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/70">Total Time</span>
+                  <span className="text-cyan-400 font-bold">{stats.totalTimeSpent}h</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/70">Favorite Topic</span>
+                  <span className="text-pink-400 font-bold">{stats.favoriteTopic}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/70">Last Active</span>
+                  <span className="text-orange-400 font-bold">{stats.lastActive}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -474,6 +628,22 @@ const Profile = () => {
                 <div className="text-center p-4 bg-white/5 rounded-xl">
                   <div className="text-2xl font-bold text-purple-400">{stats.contestsParticipated}</div>
                   <div className="text-sm text-white/70">Contests</div>
+                </div>
+                <div className="text-center p-4 bg-white/5 rounded-xl">
+                  <div className="text-2xl font-bold text-blue-400">{stats.contestsWon}</div>
+                  <div className="text-sm text-white/70">Contests Won</div>
+                </div>
+                <div className="text-center p-4 bg-white/5 rounded-xl">
+                  <div className="text-2xl font-bold text-cyan-400">{stats.monthlyActivity}</div>
+                  <div className="text-sm text-white/70">Monthly Activity</div>
+                </div>
+                <div className="text-center p-4 bg-white/5 rounded-xl">
+                  <div className="text-2xl font-bold text-pink-400">{stats.totalTimeSpent}h</div>
+                  <div className="text-sm text-white/70">Total Time</div>
+                </div>
+                <div className="text-center p-4 bg-white/5 rounded-xl">
+                  <div className="text-2xl font-bold text-orange-400">{stats.averageRating}</div>
+                  <div className="text-sm text-white/70">Avg Rating</div>
                 </div>
               </div>
             </div>
@@ -523,12 +693,17 @@ const Profile = () => {
                       <div className="text-white font-medium">{activity.title}</div>
                       <div className="text-white/70 text-sm">{activity.status}</div>
                     </div>
-                    <div className="text-white/50 text-sm">{activity.time}</div>
-                    {activity.difficulty && (
-                      <span className={`text-xs px-2 py-1 rounded-full ${getDifficultyColor(activity.difficulty)} bg-white/10`}>
-                        {activity.difficulty}
-                      </span>
-                    )}
+                    <div className="flex items-center space-x-2">
+                      {activity.points && (
+                        <span className="text-yellow-400 text-sm font-medium">+{activity.points} pts</span>
+                      )}
+                      <div className="text-white/50 text-sm">{activity.time}</div>
+                      {activity.difficulty && (
+                        <span className={`text-xs px-2 py-1 rounded-full ${getDifficultyColor(activity.difficulty)} bg-white/10`}>
+                          {activity.difficulty}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

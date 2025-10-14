@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
 import { useParams, useNavigate } from 'react-router-dom';
-import io from 'socket.io-client';
 import DashboardNavbar from './DashboardNavbar';
+import BackButton from './BackButton';
 import { 
   MdCode, 
   MdPlayArrow, 
@@ -11,8 +12,7 @@ import {
   MdPerson,
   MdTimer,
   MdCheckCircle,
-  MdError,
-  MdArrowBack
+  MdError
 } from 'react-icons/md';
 
 const InterviewExamine = () => {
@@ -29,19 +29,10 @@ const InterviewExamine = () => {
   const [isHost, setIsHost] = useState(false);
   const [shareLink, setShareLink] = useState('');
   const messagesEndRef = useRef(null);
-  const textAreaRef = useRef(null);
-  const [socket, setSocket] = useState(null);
-  const [connected, setConnected] = useState(false);
-  // Prevent echo loop when applying remote updates
-  const suppressNextEmitRef = useRef(false);
-  // Debounce timer for code-change emits
-  const debounceTimerRef = useRef(null);
+  const socketRef = useRef(null);
 
-  const SOCKET_URL = (
-    import.meta?.env?.VITE_SOCKET_URL ||
-    import.meta?.env?.VITE_BACKEND_URL ||
-    'http://localhost:5000'
-  );
+  // Configure socket URL (Render/production) with fallback to local
+  const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001';
 
   const languages = [
     { value: 'JavaScript', label: 'JavaScript' },
@@ -57,7 +48,44 @@ const InterviewExamine = () => {
     } else {
       createNewSession();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  // Socket connect/join room and listeners
+  useEffect(() => {
+    // Connect once
+    if (!socketRef.current) {
+      socketRef.current = io(SOCKET_URL, { transports: ['websocket'], withCredentials: true });
+    }
+
+    const socket = socketRef.current;
+
+    // Join room when we have an id
+    const roomToJoin = sessionId || session?.id;
+    if (roomToJoin) {
+      socket.emit('join-room', roomToJoin);
+    }
+
+    // Receive chat messages
+    const onChat = (payload) => {
+      if (!payload) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          sender: payload.senderName || payload.id || 'Anonymous',
+          content: payload.message,
+          timestamp: new Date().toISOString()
+        }
+      ]);
+    };
+    socket.on('chat', onChat);
+
+    return () => {
+      socket.off('chat', onChat);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, session?.id]);
 
   useEffect(() => {
     scrollToBottom();
@@ -113,102 +141,6 @@ const InterviewExamine = () => {
     }
   };
 
-  // Socket.IO setup for collaborative editing and chat
-  useEffect(() => {
-    if (!sessionId) return;
-
-    const s = io(`${SOCKET_URL}/interview`, {
-      transports: ['websocket', 'polling'],
-      withCredentials: true,
-      path: '/socket.io'
-    });
-
-    s.on('connect', () => {
-      setConnected(true);
-      s.emit('join-session', {
-        sessionId,
-        user: {
-          id: localStorage.getItem('userId'),
-          name: localStorage.getItem('userName') || 'User'
-        }
-      });
-
-      // Share current code to newly joined peers to bootstrap their editor
-      // Emit only if we have something meaningful
-      if (code && code.length > 0) {
-        s.emit('code-change', {
-          sessionId,
-          code,
-          language: selectedLanguage
-        });
-      }
-    });
-
-    s.on('disconnect', () => setConnected(false));
-
-    s.on('code-update', (payload) => {
-      if (typeof payload?.code === 'string') {
-        // Mark that the next local change originates from remote to avoid re-emitting
-        suppressNextEmitRef.current = true;
-        setCode(payload.code);
-        if (payload.language) setSelectedLanguage(payload.language);
-      }
-    });
-
-    s.on('run-result', (result) => {
-      setIsRunning(false);
-      setOutput(result?.success ? String(result.output || '') : `Error: ${result?.output || 'Unknown'}`);
-    });
-
-    s.on('chat-message', (msg) => {
-      setMessages((prev) => [...prev, msg]);
-    });
-
-    s.on('chat-history', (history) => {
-      if (Array.isArray(history)) {
-        setMessages(history);
-      }
-    });
-
-    s.on('participants', (list) => {
-      if (Array.isArray(list)) setParticipants(list);
-    });
-
-    setSocket(s);
-    return () => { s.close(); };
-  }, [sessionId]);
-
-  // Emit code changes in real-time with a small debounce
-  useEffect(() => {
-    if (!socket || !connected || !sessionId) return;
-
-    // Clear any pending debounce
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-
-    debounceTimerRef.current = setTimeout(() => {
-      // If this update came from a remote 'code-update', do not echo back
-      if (suppressNextEmitRef.current) {
-        suppressNextEmitRef.current = false;
-        return;
-      }
-      socket.emit('code-change', {
-        sessionId,
-        code,
-        language: selectedLanguage
-      });
-    }, 150);
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-        debounceTimerRef.current = null;
-      }
-    };
-  }, [code, selectedLanguage, socket, connected, sessionId]);
-
   const joinSession = () => {
     const newParticipant = {
       id: localStorage.getItem('userId'),
@@ -235,11 +167,6 @@ const InterviewExamine = () => {
 
   const runCode = async () => {
     if (!code.trim()) return;
-    if (socket && connected && sessionId) {
-      setIsRunning(true);
-      socket.emit('run-code', { sessionId, code, language: selectedLanguage.toLowerCase() });
-      return;
-    }
     
     setIsRunning(true);
     try {
@@ -341,16 +268,29 @@ const InterviewExamine = () => {
 
   const sendMessage = () => {
     if (!newMessage.trim()) return;
-    const message = {
+    
+    // Emit to room via socket for realtime delivery
+    const room = sessionId || session?.id;
+    if (socketRef.current && room) {
+      socketRef.current.emit('chat', { roomId: room, message: newMessage.trim(), senderName: localStorage.getItem('userName') || 'Anonymous' });
+    }
+
+    // Locally append for instant feedback
+    const localMessage = {
       id: Date.now(),
       sender: localStorage.getItem('userName') || 'Anonymous',
       content: newMessage,
       timestamp: new Date().toISOString()
     };
-    // Do not locally append to avoid duplicates; rely on server echo
+
+    const updatedMessages = [...messages, localMessage];
+    setMessages(updatedMessages);
     setNewMessage('');
-    if (socket && connected && sessionId) {
-      socket.emit('chat-message', { sessionId, message });
+
+    const updatedSession = { ...session, messages: updatedMessages };
+    setSession(updatedSession);
+    if (sessionId) {
+      localStorage.setItem(`interviewSession_${sessionId}`, JSON.stringify(updatedSession));
     }
   };
 
@@ -372,7 +312,7 @@ const InterviewExamine = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-violet-900/20 to-black relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-black via-violet-900/20 to-black relative overflow-hidden pt-20">
       {/* Background watermark */}
       <div className="absolute inset-0 flex items-center justify-center opacity-5 select-none pointer-events-none">
         <span className="text-9xl font-bold text-violet-400">SKYPAD</span>
@@ -382,19 +322,11 @@ const InterviewExamine = () => {
         {/* Header */}
         <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {/* Back Button */}
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
-                title="Back to Dashboard"
-              >
-                <MdArrowBack className="w-6 h-6 text-white" />
-              </button>
-              
+            <div className="flex items-center space-x-6">
+              <BackButton to="/dashboard" text="Back to Dashboard" />
               <div>
                 <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
-                  Interv-Examine
+                  Interview-Examine
                 </h1>
                 <p className="text-gray-300 mt-2">Collaborative coding session</p>
               </div>
@@ -451,34 +383,8 @@ const InterviewExamine = () => {
               {/* Code Textarea */}
               <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 flex-1">
                 <textarea
-                  ref={textAreaRef}
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Tab') {
-                      e.preventDefault(); // Prevent default tab behavior (focus change)
-
-                      const start = e.target.selectionStart;
-                      const end = e.target.selectionEnd;
-
-                      // Create the new value with the tab spaces
-                      const updated = code.substring(0, start) + '  ' + code.substring(end);
-                      setCode(updated);
-
-                      // Schedule the cursor position update
-                      // This ensures it runs AFTER React has updated the DOM
-                      setTimeout(() => {
-                        if (textAreaRef.current) {
-                          const newCursorPosition = start + 2;
-                          textAreaRef.current.selectionStart = newCursorPosition;
-                          textAreaRef.current.selectionEnd = newCursorPosition;
-                        }
-                      }, 0);
-                    }
-                  }}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
                   placeholder="Write your code here..."
                   className="w-full h-64 bg-black/20 border border-white/20 rounded-lg p-4 text-white font-mono text-sm resize-none focus:outline-none focus:border-violet-400"
                 />

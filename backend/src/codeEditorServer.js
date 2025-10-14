@@ -9,38 +9,27 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// --- START: CORS CONFIGURATION FIX ---
-
-// 1. Define the list of all allowed frontend domains.
-const allowedOrigins = [
+// CORS configuration
+const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:5173",
-  "https://sky-pad-ide.vercel.app" // Your deployed frontend URL
-];
+  process.env.FRONTEND_ORIGIN
+].filter(Boolean);
 
-// 2. Create a reusable CORS options object.
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests from whitelisted origins and server-to-server requests (where origin is undefined)
-    if (allowedOrigins.includes(origin) || !origin) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+app.use(cors({
+  origin: ALLOWED_ORIGINS,
   methods: ["GET", "POST"],
   credentials: true
-};
+}));
 
-// 3. Apply the fixed CORS options to both Express (for HTTP requests) and Socket.IO (for WebSockets).
-app.use(cors(corsOptions));
-
+// Socket.IO setup
 const io = new Server(server, {
-  cors: corsOptions // Use the same options here
+  cors: {
+    origin: ALLOWED_ORIGINS,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
-
-// --- END: CORS CONFIGURATION FIX ---
-
 
 // Store current code state
 let currentState = {
@@ -157,25 +146,48 @@ async function executeCode(code, language) {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('A user connected to code editor');
-  
-  socket.emit('initial-code', currentState);
 
-  socket.on('code-change', (data) => {
-    currentState = data;
-    socket.broadcast.emit('code-update', data);
+  // Room joining for collaborative sessions
+  socket.on('join-room', (roomId) => {
+    if (!roomId) return;
+    socket.join(roomId);
+    socket.to(roomId).emit('system', { type: 'join', id: socket.id });
   });
 
+  // Send current code state to newly connected users
+  socket.emit('initial-code', currentState);
+
+  // Handle code changes
+  socket.on('code-change', ({ roomId, ...data }) => {
+    currentState = data;
+    if (roomId) {
+      socket.to(roomId).emit('code-update', data);
+    } else {
+      socket.broadcast.emit('code-update', data);
+    }
+  });
+
+  // Handle code execution
   socket.on('run-code', async (data) => {
     console.log(`Executing ${data.language} code...`);
     const result = await executeCode(data.code, data.language);
-    io.emit('run-result', result);
+    if (data.roomId) io.to(data.roomId).emit('run-result', result);
+    else io.emit('run-result', result);
   });
 
+  // Chat messaging within a room
+  socket.on('chat', ({ roomId, message, senderName }) => {
+    if (!roomId || !message) return;
+    io.to(roomId).emit('chat', { id: socket.id, message, senderName, ts: Date.now() });
+  });
+
+  // Handle language change
   socket.on('language-change', (data) => {
     currentState.language = data.language;
     socket.broadcast.emit('language-update', data);
   });
 
+  // Handle disconnect
   socket.on('disconnect', () => {
     console.log('A user disconnected from code editor');
   });
@@ -197,11 +209,12 @@ app.get('/languages', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3002; // Render uses PORT, not a custom name
+const PORT = process.env.CODE_EDITOR_PORT || 3002;
 
 server.listen(PORT, () => {
   console.log(`🚀 Code Editor WebSocket server running on port ${PORT}`);
   console.log(`📝 Supported languages: ${Object.keys(languageConfigs).join(', ')}`);
+  console.log(`🔌 WebSocket endpoint: ws://localhost:${PORT}`);
 });
 
 module.exports = { server, io };

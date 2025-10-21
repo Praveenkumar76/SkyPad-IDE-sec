@@ -9,7 +9,8 @@ import {
   MdStar, 
   MdPlayArrow,
   MdCode,
-  MdAssignment
+  MdAssignment,
+  MdAdd
 } from 'react-icons/md';
 
 const Challenges = () => {
@@ -404,11 +405,23 @@ const Challenges = () => {
               {/* Create Contest Section */}
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-white">Create New Contest</h3>
-                  <button className="px-4 py-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white rounded-lg font-medium transition-all duration-300 hover:scale-105">
-                    <MdCode className="w-4 h-4 inline mr-2" />
-                    Quick Create
-                  </button>
+                  <h3 className="text-xl font-semibold text-white">Contest Actions</h3>
+                  <div className="flex space-x-4">
+                    <button 
+                      onClick={() => navigate('/join-contest')}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg font-medium transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+                    >
+                      <MdPlayArrow className="w-5 h-5" />
+                      <span>Join Contest</span>
+                    </button>
+                    <button 
+                      onClick={() => navigate('/create-contest')}
+                      className="px-6 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white rounded-lg font-medium transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+                    >
+                      <MdAdd className="w-5 h-5" />
+                      <span>Create Contest</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20">

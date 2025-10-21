@@ -174,86 +174,123 @@ const CodeDuelIDE = () => {
       return;
     }
 
-    setOutput('Running code against sample test cases...\n');
+    setOutput('Running code against test cases...\n');
     setIsRunning(true);
     setTestResults(null);
     setError('');
 
     try {
-      // For now, we'll simulate running against sample test cases with basic validation
-      // In production, this would call an API endpoint to run against sample tests only
-      const sampleTestResults = problem?.examples?.map((example, index) => {
-        const expectedOutput = example.expectedOutput || example.output;
-        // Basic validation - check if code is meaningful and potentially correct
-        let passed = false;
-        
-        // Simple check: code should have some substance and not be just empty or comments
-        const meaningfulLines = code.split('\n').filter(line => 
-          line.trim() && 
-          !line.trim().startsWith('//') && 
-          !line.trim().startsWith('#') &&
-          !line.trim().startsWith('*')
-        ).length;
-        
-        if (meaningfulLines >= 1) {
-          // For Hello World example, check for proper print statement
-          if (expectedOutput === 'Hello World') {
-            if (language === 'javascript') {
-              passed = /console\.log\s*\(\s*["']Hello World["']\s*\)/.test(code);
-            } else if (language === 'python') {
-              passed = /print\s*\(\s*["']Hello World["']\s*\)/.test(code);
-            } else if (language === 'java') {
-              passed = /System\.out\.println?\s*\(\s*["']Hello World["']\s*\)/.test(code);
-            } else if (language === 'cpp') {
-              passed = /cout\s*<<\s*["']Hello World["']/.test(code);
-            }
-          }
-          // For numeric output problems (like algorithmic problems)
-          else if (!isNaN(parseFloat(expectedOutput))) {
-            const expectedNum = parseFloat(expectedOutput);
-            if (language === 'python') {
-              // Check for direct print of the number
-              passed = code.includes(`print(${expectedNum})`) || /print\s*\(\s*\w+\s*\)/.test(code);
-            } else if (language === 'javascript') {
-              passed = code.includes(`console.log(${expectedNum})`) || /console\.log\s*\(\s*\w+\s*\)/.test(code);
-            } else {
-              // For other languages, assume it might be correct if it has meaningful structure
-              passed = true;
-            }
-          }
-          // For other cases, use more generic checks
-          else {
-            // This is a simplified check - in reality you'd run the actual code
-            passed = meaningfulLines >= 1; // Accept any meaningful code
-          }
-        }
-        
-        return {
-          testCaseIndex: index + 1,
-          input: example.input,
-          expectedOutput,
-          actualOutput: passed ? expectedOutput : 'Wrong output or no output',
-          passed,
-          isSample: true
-        };
-      }) || [];
-
-      setTestResults({
-        sampleResults: sampleTestResults,
-        allPassed: sampleTestResults.every(r => r.passed)
+      // Call backend API to run against all test cases (sample + hidden)
+      const response = await fetch('http://localhost:5000/api/problems/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          problemId: problem?.id,
+          code,
+          language: language === 'cpp' ? 'C++' : language.charAt(0).toUpperCase() + language.slice(1)
+        })
       });
 
-      if (sampleTestResults.length === 0) {
-        setOutput('No sample test cases available.\n\n✓ Code syntax validated.\n\nNote: Click "Submit" to run against all test cases.');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Combine sample and hidden results
+      const allResults = [...(result.sampleResults || []), ...(result.hiddenResults || [])];
+      const sampleCount = result.sampleResults?.length || 0;
+      const hiddenCount = result.hiddenResults?.length || 0;
+      const totalTests = allResults.length;
+      const passedTests = allResults.filter(test => test.passed).length;
+      const samplePassed = (result.sampleResults || []).filter(test => test.passed).length;
+      const hiddenPassed = (result.hiddenResults || []).filter(test => test.passed).length;
+      
+      setTestResults({
+        sampleResults: result.sampleResults || [],
+        hiddenResults: result.hiddenResults || [],
+        allResults: allResults,
+        allPassed: passedTests === totalTests
+      });
+
+      if (totalTests === 0) {
+        setOutput('No test cases available.');
       } else {
-        const passedCount = sampleTestResults.filter(r => r.passed).length;
-        setOutput(`Sample Tests: ${passedCount}/${sampleTestResults.length} passed\n\n✓ Code compiled successfully!\n\nNote: Click "Submit" to run against all test cases (including hidden tests).`);
+        let outputMsg = `Test Results: ${passedTests}/${totalTests} passed\n`;
+        if (sampleCount > 0) {
+          outputMsg += `Sample Tests: ${samplePassed}/${sampleCount} passed\n`;
+        }
+        if (hiddenCount > 0) {
+          outputMsg += `Hidden Tests: ${hiddenPassed}/${hiddenCount} passed\n`;
+        }
+        outputMsg += `\n${passedTests === totalTests ? '✅ All tests passed!' : '❌ Some tests failed'}`;
+        outputMsg += `\nScore: ${result.score || 0}%`;
+        
+        // Check if all tests passed
+        if (passedTests === totalTests && totalTests > 0) {
+          outputMsg += `\n\n🎉 PERFECT SOLUTION! All ${totalTests} test cases passed!`;
+          outputMsg += `\n⏱️ Auto-submitting in 3 seconds... (Click Submit to submit now)`;
+          setOutput(outputMsg);
+          
+          // Auto-submit when all tests pass
+          setTimeout(async () => {
+            // Only auto-submit if match is still active and no manual submission happened
+            if (!isSubmitting && !matchFinished && matchStatus === 'in_progress') {
+              try {
+                setOutput(prev => prev + `\n\n🚀 Auto-submitting perfect solution...`);
+                await handleSubmitCode();
+              } catch (err) {
+                console.error('Auto-submit failed:', err);
+                setOutput(prev => prev + `\n\n❌ Auto-submit failed. Please click Submit manually.`);
+              }
+            }
+          }, 3000);
+        } else {
+          outputMsg += `\n\nNote: Click "Submit" to submit your final solution.`;
+          setOutput(outputMsg);
+        }
       }
     } catch (err) {
-      setOutput(`Error: ${err.message}`);
-      setError(err.message);
+      console.error('Run code error:', err);
+      setOutput(`Error: ${err.message || 'Failed to run code'}`);
+      setError(err.message || 'Failed to run code');
     } finally {
       setIsRunning(false);
+    }
+  };
+
+  const handleEndMatch = async () => {
+    const confirmMessage = code.trim() 
+      ? 'Are you sure you want to end the match?\n\nThis will submit your current solution and finish the game. Your opponent may still be working on their solution.'
+      : 'Are you sure you want to end the match?\n\nYou have no code written. This will forfeit the match.';
+      
+    if (window.confirm(confirmMessage)) {
+      try {
+        setOutput('Ending match voluntarily...\n');
+        
+        // If there's code, submit it first
+        if (code.trim()) {
+          setOutput(prev => prev + 'Submitting your current solution...\n');
+          await handleSubmitCode();
+        } else {
+          // If no code, forfeit the match
+          setMatchFinished(true);
+          setMatchStatus('finished');
+          setOutput('Match ended voluntarily with no solution submitted.\n\nRedirecting to results...');
+          
+          // Redirect to results after delay
+          setTimeout(() => {
+            navigate(`/challenge/${roomId}/results`);
+          }, 2000);
+        }
+      } catch (err) {
+        console.error('End match error:', err);
+        setOutput('Failed to end match properly. Please try submitting manually.');
+        setError('Failed to end match properly');
+      }
     }
   };
 
@@ -488,7 +525,7 @@ const CodeDuelIDE = () => {
             <div className="toolbar-actions">
               <button
                 onClick={handleRunCode}
-                disabled={isSubmitting || isRunning}
+                disabled={isSubmitting || isRunning || matchFinished}
                 className="run-btn"
               >
                 {isRunning ? '⏳ Running...' : '▶ Run Code'}
@@ -499,6 +536,13 @@ const CodeDuelIDE = () => {
                 className={`submit-btn ${matchFinished ? 'disabled' : ''}`}
               >
                 {matchFinished ? '❌ Match Ended' : isSubmitting ? '⏳ Submitting...' : '✓ Submit'}
+              </button>
+              <button
+                onClick={handleEndMatch}
+                disabled={isSubmitting || isRunning || matchFinished || matchStatus !== 'in_progress'}
+                className="end-match-btn"
+              >
+                🏁 End Match
               </button>
             </div>
           </div>

@@ -19,6 +19,10 @@ import Challenges1v1 from './components/Challenges1v1';
 import ChallengeLobby from './components/ChallengeLobby';
 import CodeDuelIDE from './components/CodeDuelIDE';
 import ChallengeResults from './components/ChallengeResults';
+import ContestCreation from './components/ContestCreation';
+import JoinContest from './components/JoinContest';
+import ContestInterface from './components/ContestInterface';
+import ContestLeaderboard from './components/ContestLeaderboard';
 import './App.css';
 
 function HeroWithNav() {
@@ -60,6 +64,10 @@ function App() {
           <Route path="/solve/:id" element={<ProblemSolver />} />
           <Route path="/dsa-sheet" element={<DSASheet />} />
           <Route path="/challenges" element={<Challenges />} />
+          <Route path="/create-contest" element={<ContestCreation />} />
+          <Route path="/join-contest" element={<JoinContest />} />
+          <Route path="/contest/:contestId" element={<ContestInterface />} />
+          <Route path="/contest/:contestId/leaderboard" element={<ContestLeaderboard />} />
           <Route path="/challenges/1v1" element={<Challenges1v1 />} />
           <Route path="/challenge/:roomId/lobby" element={<ChallengeLobby />} />
           <Route path="/challenge/:roomId/duel" element={<CodeDuelIDE />} />

@@ -276,7 +276,8 @@
 }
 
 .run-btn,
-.submit-btn {
+.submit-btn,
+.end-match-btn {
   padding: 0.6rem 1.5rem;
   border: none;
   border-radius: 6px;
@@ -324,6 +325,22 @@
 .submit-btn.disabled:hover {
   transform: none !important;
   box-shadow: none !important;
+}
+
+.end-match-btn {
+  background: #ff5722;
+  color: white;
+}
+
+.end-match-btn:hover:not(:disabled) {
+  background: #e64a19;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.4);
+}
+
+.end-match-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .editor-container {

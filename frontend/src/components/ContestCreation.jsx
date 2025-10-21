@@ -261,22 +261,34 @@ const ContestCreation = () => {
         tags: question.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
       }));
 
+      const requestData = {
+        title: formData.title,
+        description: formData.description,
+        password: formData.password,
+        visibility: formData.visibility,
+        questions: processedQuestions,
+        timeSlots: formData.timeSlots,
+        allowedLanguages: formData.allowedLanguages.map(lang => lang.toLowerCase()),
+        maxParticipants: formData.maxParticipants ? parseInt(formData.maxParticipants) : null
+      };
+
+      // Debug logging
+      console.log('Sending contest creation request:', {
+        title: requestData.title,
+        description: requestData.description,
+        password: requestData.password ? 'PROVIDED' : 'MISSING',
+        timeSlots: requestData.timeSlots ? `${requestData.timeSlots.length} slots, selected: ${requestData.timeSlots.filter(s => s.isSelected).length}` : 'MISSING',
+        questions: requestData.questions ? `${requestData.questions.length} questions` : 'MISSING',
+        selectedSlot: requestData.timeSlots?.find(s => s.isSelected)
+      });
+
       const response = await fetch('http://localhost:5000/api/contests/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          password: formData.password,
-          visibility: formData.visibility,
-          questions: processedQuestions,
-          timeSlots: formData.timeSlots,
-          allowedLanguages: formData.allowedLanguages.map(lang => lang.toLowerCase()),
-          maxParticipants: formData.maxParticipants ? parseInt(formData.maxParticipants) : null
-        })
+        body: JSON.stringify(requestData)
       });
 
       if (!response.ok) {

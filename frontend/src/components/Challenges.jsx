@@ -15,10 +15,6 @@ import {
 const Challenges = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('ongoing');
-  const [showCreateRoom, setShowCreateRoom] = useState(false);
-  const [showJoinRoom, setShowJoinRoom] = useState(false);
-  const [roomName, setRoomName] = useState('');
-  const [joinRoomId, setJoinRoomId] = useState('');
 
   const challenges = {
     ongoing: [
@@ -120,28 +116,6 @@ const Challenges = () => {
     }
   };
 
-  const generateRoomId = () => {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  };
-
-  const createRoom = () => {
-    const roomId = generateRoomId();
-    const finalRoomName = roomName.trim() || `Room ${roomId.substring(0, 8)}`;
-    
-    // Store the room name in localStorage so ChallengeRoom can access it
-    localStorage.setItem(`roomName_${roomId}`, finalRoomName);
-    
-    navigate(`/challenge-room/${roomId}`);
-  };
-
-  const joinRoom = () => {
-    if (!joinRoomId.trim()) {
-      alert('Please enter a room ID');
-      return;
-    }
-    navigate(`/challenge-room/${joinRoomId.trim()}`);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-violet-900/20 to-black relative overflow-hidden">
       {/* Background watermark */}
@@ -167,27 +141,38 @@ const Challenges = () => {
         </div>
 
         <div className="p-6">
-          {/* Tabs */}
-          <div className="flex space-x-1 bg-white/10 backdrop-blur-md rounded-lg p-1 mb-8 w-fit">
-            {[
-              { key: 'ongoing', label: 'Ongoing', count: challenges.ongoing.length },
-              { key: 'upcoming', label: 'Upcoming', count: challenges.upcoming.length },
-              { key: 'completed', label: 'Completed', count: challenges.completed.length },
-              { key: 'one-vs-one', label: 'One vs One', count: 0 },
-              { key: 'contest', label: 'Create Contest', count: 0 }
-            ].map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
-                  activeTab === tab.key
-                    ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                {tab.label} ({tab.count})
-              </button>
-            ))}
+          {/* Tabs and 1v1 Challenge Button */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex space-x-1 bg-white/10 backdrop-blur-md rounded-lg p-1 w-fit">
+              {[
+                { key: 'ongoing', label: 'Ongoing', count: challenges.ongoing.length },
+                { key: 'upcoming', label: 'Upcoming', count: challenges.upcoming.length },
+                { key: 'completed', label: 'Completed', count: challenges.completed.length },
+                { key: 'contest', label: 'Create Contest', count: 0 }
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
+                    activeTab === tab.key
+                      ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg'
+                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {tab.label} ({tab.count})
+                </button>
+              ))}
+            </div>
+
+            {/* 1v1 CodeDuel Button */}
+            <button
+              onClick={() => navigate('/challenges/1v1')}
+              className="px-8 py-3 bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 hover:from-red-600 hover:via-pink-600 hover:to-purple-600 text-white rounded-lg font-bold text-lg shadow-xl transition-all duration-300 hover:scale-110 flex items-center space-x-3"
+            >
+              <span className="text-2xl">⚔️</span>
+              <span>1v1 CodeDuel</span>
+              <span className="text-2xl">⚔️</span>
+            </button>
           </div>
 
           {/* Challenges Grid */}
@@ -602,86 +587,8 @@ const Challenges = () => {
             </div>
           )}
 
-          {/* One vs One Tab */}
-          {activeTab === 'one-vs-one' && (
-            <div className="space-y-6">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">One vs One Challenges</h2>
-                <p className="text-gray-300">Challenge other users to coding duels</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Create Challenge */}
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20 hover:border-violet-400/50 transition-all duration-300 text-center">
-                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-4xl mb-6">
-                    ⚔️
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-4">Create Challenge</h3>
-                  <p className="text-gray-300 mb-6">
-                    Create a new one vs one challenge room and invite friends to compete
-                  </p>
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      value={roomName}
-                      onChange={(e) => setRoomName(e.target.value)}
-                      placeholder="Enter room name (optional)"
-                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:border-violet-400"
-                    />
-                    <button
-                      onClick={createRoom}
-                      className="w-full bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105"
-                    >
-                      Create Room
-                    </button>
-                    <p className="text-gray-400 text-sm text-center">
-                      A unique room ID will be generated for sharing
-                    </p>
-                  </div>
-                </div>
-
-                {/* Join Challenge */}
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20 hover:border-violet-400/50 transition-all duration-300 text-center">
-                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-4xl mb-6">
-                    🎯
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-4">Join Challenge</h3>
-                  <p className="text-gray-300 mb-6">
-                    Join an existing challenge room using the room ID
-                  </p>
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      value={joinRoomId}
-                      onChange={(e) => setJoinRoomId(e.target.value)}
-                      placeholder="Enter room ID"
-                      className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:border-violet-400"
-                    />
-                    <button
-                      onClick={joinRoom}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105"
-                    >
-                      Join Room
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Active Duels */}
-              <div className="mt-8">
-                <h3 className="text-xl font-semibold text-white mb-4">Active Duels</h3>
-                <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
-                  <div className="text-center py-8">
-                    <div className="text-gray-400 text-lg mb-2">No active duels</div>
-                    <p className="text-gray-500">Create or join a challenge to start competing!</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Empty State */}
-          {activeTab !== 'one-vs-one' && activeTab !== 'contest' && challenges[activeTab] && challenges[activeTab].length === 0 && (
+          {activeTab !== 'contest' && challenges[activeTab] && challenges[activeTab].length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-400 text-xl mb-4">
                 No {activeTab} challenges available

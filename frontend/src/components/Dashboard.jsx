@@ -26,46 +26,69 @@ import {
 const Dashboard = () => {
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const userMenuRef = useRef(null);
   
   // Get user data from localStorage or context (you can modify this based on your auth system)
-  const [userData, setUserData] = useState({
-    name: localStorage.getItem('userName') || 'John Durairaj',
-    email: localStorage.getItem('userEmail') || 'john.durairaj@email.com',
-    avatar: localStorage.getItem('userAvatar') || 'JD'
+  const [userData, setUserData] = useState(() => {
+    // Safe localStorage access
+    if (typeof window !== 'undefined') {
+      return {
+        name: localStorage.getItem('userName') || 'John Durairaj',
+        email: localStorage.getItem('userEmail') || 'john.durairaj@email.com',
+        avatar: localStorage.getItem('userAvatar') || 'JD'
+      };
+    }
+    return {
+      name: 'John Durairaj',
+      email: 'john.durairaj@email.com',
+      avatar: 'JD'
+    };
   });
 
   // Fetch user profile data on component mount
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
+        setIsLoading(true);
+        setError(null);
+        
         const token = localStorage.getItem('token');
         if (token) {
           const profileData = await userAPI.getProfile();
           console.log('Profile data received:', profileData); // Debug log
           setUserData({
-            name: profileData.fullName,
-            email: profileData.email,
-            avatar: profileData.fullName.substring(0, 2).toUpperCase(),
+            name: profileData.fullName || 'User',
+            email: profileData.email || '',
+            avatar: profileData.fullName ? profileData.fullName.substring(0, 2).toUpperCase() : 'U',
             profilePictureUrl: profileData.profilePictureUrl || null,
           });
           // Update localStorage with fresh data
-          localStorage.setItem('userName', profileData.fullName);
-          localStorage.setItem('userEmail', profileData.email);
-          localStorage.setItem('userAvatar', profileData.fullName.substring(0, 2).toUpperCase());
+          if (profileData.fullName) localStorage.setItem('userName', profileData.fullName);
+          if (profileData.email) localStorage.setItem('userEmail', profileData.email);
+          if (profileData.fullName) localStorage.setItem('userAvatar', profileData.fullName.substring(0, 2).toUpperCase());
           if (profileData.profilePictureUrl) {
             localStorage.setItem('userProfilePicture', profileData.profilePictureUrl);
           } else {
             localStorage.removeItem('userProfilePicture');
           }
+        } else {
+          // No token, redirect to login
+          navigate('/login');
+          return;
         }
       } catch (error) {
         console.error('Failed to fetch user profile:', error);
+        setError('Failed to load profile data');
         // If token is invalid, redirect to login
         if (error.message.includes('token') || error.message.includes('unauthorized')) {
           localStorage.clear();
           navigate('/login');
+          return;
         }
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -116,6 +139,32 @@ const Dashboard = () => {
     };
     return colors[color] || 'bg-gray-500';
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-violet-900/30 to-black flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-violet-900/30 to-black flex items-center justify-center">
+        <div className="text-red-400 text-xl">
+          {error}
+          <button 
+            onClick={() => window.location.reload()} 
+            className="ml-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -35,34 +35,11 @@ const ProblemSolver = () => {
   ];
 
   const defaultCode = {
-    'JavaScript': `function solve(input) {
-    // Write your solution here
-    return input;
-}`,
-    'Python': `def solve(input):
-    # Write your solution here
-    return input`,
-    'Java': `public class Solution {
-    public String solve(String input) {
-        // Write your solution here
-        return input;
-    }
-}`,
-    'C++': `#include <iostream>
-#include <string>
-using namespace std;
-
-string solve(string input) {
-    // Write your solution here
-    return input;
-}`,
-    'C': `#include <stdio.h>
-#include <string.h>
-
-char* solve(char* input) {
-    // Write your solution here
-    return input;
-}`
+    'JavaScript': '',
+    'Python': '',
+    'Java': '',
+    'C++': '',
+    'C': ''
   };
 
   useEffect(() => {
@@ -76,8 +53,9 @@ char* solve(char* input) {
   };
 
   useEffect(() => {
+    // Keep code editor empty - users should write all code themselves
     if (problem && problem.allowedLanguages.includes(selectedLanguage)) {
-      setCode(defaultCode[selectedLanguage] || '');
+      setCode(''); // Always start with empty code
     }
   }, [selectedLanguage, problem]);
 

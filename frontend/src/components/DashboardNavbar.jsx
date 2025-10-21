@@ -10,29 +10,44 @@ import {
   MdKeyboardArrowDown,
   MdPerson,
   MdUpload,
-  MdDescription
+  MdDescription,
+  MdChat
 } from 'react-icons/md';
 import { GoGift } from "react-icons/go";
 
 const DashboardNavbar = () => {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [showLogoutPopup, setShowLogoutPopup] = useState(false);
-  const [userName, setUserName] = useState(localStorage.getItem('userName') || 'User');
-  const [userEmail, setUserEmail] = useState(localStorage.getItem('userEmail') || '');
-  const [userAvatar, setUserAvatar] = useState(localStorage.getItem('userAvatar') || (localStorage.getItem('userName') ? localStorage.getItem('userName').substring(0,2).toUpperCase() : 'U'));
-  const [userProfilePicture, setUserProfilePicture] = useState(localStorage.getItem('userProfilePicture') || '');
+  const [userName, setUserName] = useState(() => {
+    return typeof window !== 'undefined' ? (localStorage.getItem('userName') || 'User') : 'User';
+  });
+  const [userEmail, setUserEmail] = useState(() => {
+    return typeof window !== 'undefined' ? (localStorage.getItem('userEmail') || '') : '';
+  });
+  const [userAvatar, setUserAvatar] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const name = localStorage.getItem('userName');
+      return localStorage.getItem('userAvatar') || (name ? name.substring(0,2).toUpperCase() : 'U');
+    }
+    return 'U';
+  });
+  const [userProfilePicture, setUserProfilePicture] = useState(() => {
+    return typeof window !== 'undefined' ? (localStorage.getItem('userProfilePicture') || '') : '';
+  });
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    const name = localStorage.getItem('userName') || 'User';
-    const email = localStorage.getItem('userEmail') || '';
-    const avatar = localStorage.getItem('userAvatar') || name.substring(0,2).toUpperCase();
-    const profilePicture = localStorage.getItem('userProfilePicture') || '';
-    setUserName(name);
-    setUserEmail(email);
-    setUserAvatar(avatar);
-    setUserProfilePicture(profilePicture);
+    if (typeof window !== 'undefined') {
+      const name = localStorage.getItem('userName') || 'User';
+      const email = localStorage.getItem('userEmail') || '';
+      const avatar = localStorage.getItem('userAvatar') || name.substring(0,2).toUpperCase();
+      const profilePicture = localStorage.getItem('userProfilePicture') || '';
+      setUserName(name);
+      setUserEmail(email);
+      setUserAvatar(avatar);
+      setUserProfilePicture(profilePicture);
+    }
   }, []);
 
   const handleLogout = () => {
@@ -105,6 +120,14 @@ const DashboardNavbar = () => {
               >
                 <MdPerson className="w-5 h-5" />
                 <span>Profile</span>
+              </Link>
+
+              <Link 
+                to="/chat" 
+                className={getActiveLinkClass('/chat')}
+              >
+                <MdChat className="w-5 h-5" />
+                <span>Chat</span>
               </Link>
 
               <Link 

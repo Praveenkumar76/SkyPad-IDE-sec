@@ -32,7 +32,7 @@ const SignUp = () => {
       localStorage.setItem('userId', data.user.id);
       
       setShowRegisterPopup(true);
-      setTimeout(() => navigate('/dashboard'), 1200);
+      setTimeout(() => navigate('/chat'), 1200);
     } catch (error) {
       alert(error.message || 'Registration failed');
     } finally {

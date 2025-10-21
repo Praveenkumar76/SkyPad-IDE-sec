@@ -71,7 +71,7 @@ const CodeEditor = () => {
 
   // WebSocket connection setup
   useEffect(() => {
-    const newSocket = io('http://localhost:3002');
+    const newSocket = io('http://localhost:5000');
     
     newSocket.on('connect', () => {
       setIsConnected(true);

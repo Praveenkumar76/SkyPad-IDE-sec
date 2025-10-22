@@ -25,6 +25,7 @@ const ProblemSolver = () => {
   const [error, setError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('testcases'); // 'testcases' or 'output'
 
   const languages = [
     { value: 'JavaScript', label: 'JavaScript', extension: 'js' },
@@ -33,14 +34,6 @@ const ProblemSolver = () => {
     { value: 'C++', label: 'C++', extension: 'cpp' },
     { value: 'C', label: 'C', extension: 'c' }
   ];
-
-  const defaultCode = {
-    'JavaScript': '',
-    'Python': '',
-    'Java': '',
-    'C++': '',
-    'C': ''
-  };
 
   useEffect(() => {
     fetchProblem();
@@ -111,6 +104,7 @@ const ProblemSolver = () => {
     setIsRunning(true);
     setError('');
     setTestResults(null);
+    setActiveTab('output'); // Switch to output tab when running
 
     try {
       const response = await fetch('http://localhost:5000/api/problems/run', {
@@ -174,17 +168,47 @@ const ProblemSolver = () => {
       const allTestsPass = [...runResult.sampleResults, ...runResult.hiddenResults].every(test => test.passed);
       
       if (allTestsPass) {
-        // Mark as solved
+        // Mark as solved in localStorage
         const solvedProblems = JSON.parse(localStorage.getItem('solvedProblems') || '[]');
         if (!solvedProblems.includes(id)) {
           solvedProblems.push(id);
           localStorage.setItem('solvedProblems', JSON.stringify(solvedProblems));
         }
+        
+        // Record problem solve in backend
+        try {
+          const recordResponse = await fetch('http://localhost:5000/api/users/solve-problem', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              problemId: id,
+              title: problem.title,
+              difficulty: problem.difficulty,
+              topic: problem.topic || 'General',
+              timeSpent: Math.floor(Math.random() * 30) + 5, // Mock time spent (5-35 min)
+              language: selectedLanguage
+            })
+          });
+          
+          if (recordResponse.ok) {
+            const recordResult = await recordResponse.json();
+            console.log('Problem recorded in backend:', recordResult);
+          }
+        } catch (recordError) {
+          console.error('Failed to record problem solve:', recordError);
+          // Don't show error to user, as the problem is still marked as solved locally
+        }
+        
         setIsSubmitted(true);
         setTestResults(runResult);
+        setActiveTab('output'); // Show output on submit
         alert('Congratulations! Problem solved successfully! 🎉');
       } else {
         setTestResults(runResult);
+        setActiveTab('output'); // Show output to see failures
         alert('Some test cases failed. Please fix your solution and try again.');
       }
     } catch (err) {
@@ -236,7 +260,7 @@ const ProblemSolver = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-violet-900/30 to-black">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-violet-900/30 to-black flex flex-col">
       {/* Header */}
       <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-4">
         <div className="flex items-center justify-between">
@@ -316,9 +340,9 @@ const ProblemSolver = () => {
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-80px)]">
-        {/* Problem Description */}
-        <div className="w-1/2 p-6 overflow-y-auto">
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Panel: Problem Description */}
+        <div className="w-1/2 overflow-y-auto border-r border-white/10 p-6">
           <div className="space-y-6">
             {/* Problem Info */}
             <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
@@ -354,14 +378,14 @@ const ProblemSolver = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <h4 className="text-sm font-medium text-gray-400 mb-2">Input:</h4>
-                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border">
+                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border border-white/10">
                           {testCase.input}
                         </pre>
                       </div>
                       <div>
                         <h4 className="text-sm font-medium text-gray-400 mb-2">Expected Output:</h4>
-                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border">
-                          {testCase.output}
+                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border border-white/10">
+                          {testCase.output || testCase.expectedOutput}
                         </pre>
                       </div>
                     </div>
@@ -396,81 +420,265 @@ const ProblemSolver = () => {
           </div>
         </div>
 
-        {/* Code Editor */}
-        <div className="w-1/2 border-l border-white/10 flex flex-col">
-          <div className="bg-black/20 backdrop-blur-md p-4 border-b border-white/10">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-                <MdCode className="w-5 h-5" />
-                <span>Code Editor</span>
-              </h3>
-              <div className="text-sm text-gray-400">
-                {selectedLanguage}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 p-4">
-            <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full h-full bg-black/30 text-white font-mono text-sm p-4 rounded-lg border border-white/20 focus:outline-none focus:border-violet-400 resize-none"
-              placeholder={`Write your ${selectedLanguage} solution here...`}
-              spellCheck={false}
-            />
-          </div>
-
-          {/* Test Results */}
-          {testResults && (
-            <div className="border-t border-white/10 p-4 bg-black/20">
-              <h4 className="text-lg font-semibold text-white mb-3">Test Results</h4>
-              <div className="space-y-2">
-                {testResults.sampleResults?.map((result, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      {getTestResultIcon(result.passed)}
-                      <span className="text-white">Sample Test {index + 1}</span>
-                    </div>
-                    <div className="text-sm text-gray-300">
-                      {result.passed ? 'Passed' : 'Failed'}
-                    </div>
-                  </div>
-                ))}
-                {testResults.hiddenResults && (
-                  <div className="mt-4">
-                    <h5 className="text-sm font-medium text-gray-400 mb-2">Hidden Tests:</h5>
-                    <div className="space-y-1">
-                      {testResults.hiddenResults.map((result, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-black/30 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            {getTestResultIcon(result.passed)}
-                            <span className="text-white text-sm">Hidden Test {index + 1}</span>
-                          </div>
-                          <div className="text-sm text-gray-300">
-                            {result.passed ? 'Passed' : 'Failed'}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="mt-4 p-3 bg-violet-500/20 rounded-lg">
-                  <div className="text-center text-white font-medium">
-                    Score: {testResults.score || 0}%
-                  </div>
+        {/* Right Panel: Vertical Split (Code Editor + Results) */}
+        <div className="w-1/2 flex flex-col">
+          {/* Code Editor - Top Half */}
+          <div className="flex-1 flex flex-col border-b border-white/10">
+            <div className="bg-black/20 backdrop-blur-md p-4 border-b border-white/10">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
+                  <MdCode className="w-5 h-5" />
+                  <span>Code Editor</span>
+                </h3>
+                <div className="text-sm text-gray-400">
+                  {selectedLanguage}
                 </div>
               </div>
             </div>
-          )}
 
-          {error && (
-            <div className="border-t border-white/10 p-4 bg-red-500/20">
-              <div className="flex items-center space-x-2 text-red-400">
-                <MdError className="w-5 h-5" />
-                <span>{error}</span>
+            <div className="flex-1 p-4 overflow-hidden">
+              <textarea
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="w-full h-full bg-black/30 text-white font-mono text-sm p-4 rounded-lg border border-white/20 focus:outline-none focus:border-violet-400 resize-none"
+                placeholder={`Write your ${selectedLanguage} solution here...`}
+                spellCheck={false}
+              />
+            </div>
+          </div>
+
+          {/* Results Section - Bottom Half */}
+          <div className="flex-1 flex flex-col">
+            {/* Tab Header */}
+            <div className="bg-black/20 backdrop-blur-md border-b border-white/10">
+              <div className="flex space-x-1 p-2">
+                <button
+                  onClick={() => setActiveTab('testcases')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'testcases'
+                      ? 'bg-violet-500/20 text-violet-300 border border-violet-500/50'
+                      : 'text-gray-400 hover:text-gray-300'
+                  }`}
+                >
+                  Testcases
+                </button>
+                <button
+                  onClick={() => setActiveTab('output')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'output'
+                      ? 'bg-violet-500/20 text-violet-300 border border-violet-500/50'
+                      : 'text-gray-400 hover:text-gray-300'
+                  }`}
+                >
+                  Output
+                </button>
               </div>
             </div>
-          )}
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto p-4 bg-black/10">
+              {activeTab === 'testcases' && (
+                <div className="space-y-3">
+                  {!testResults ? (
+                    // Show problem test cases before running
+                    <>
+                      <h4 className="text-white font-medium mb-2">Sample Test Cases</h4>
+                      {problem.sampleTestCases.map((testCase, index) => (
+                        <div key={index} className="bg-white/5 rounded-lg p-3 border border-white/10">
+                          <div className="text-sm text-gray-400 mb-2">Test Case {index + 1}</div>
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-xs text-gray-500">Input:</span>
+                              <pre className="text-gray-300 text-xs bg-black/30 p-2 rounded mt-1">
+                                {testCase.input}
+                              </pre>
+                            </div>
+                            <div>
+                              <span className="text-xs text-gray-500">Expected Output:</span>
+                              <pre className="text-gray-300 text-xs bg-black/30 p-2 rounded mt-1">
+                                {testCase.output || testCase.expectedOutput}
+                              </pre>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    // Show execution results after running
+                    <>
+                      <h4 className="text-white font-medium mb-3">Test Results</h4>
+                      {testResults.sampleResults?.map((result, index) => (
+                        <div key={index} className={`rounded-lg p-4 border ${
+                          result.passed 
+                            ? 'bg-green-500/10 border-green-500/30' 
+                            : 'bg-red-500/10 border-red-500/30'
+                        }`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-2">
+                              {getTestResultIcon(result.passed)}
+                              <span className="text-white font-medium">Test {index + 1}</span>
+                            </div>
+                            <span className={`text-sm font-medium ${
+                              result.passed ? 'text-green-400' : 'text-red-400'
+                            }`}>
+                              {result.passed ? 'Passed' : 'Failed'}
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-2 text-sm">
+                            <div>
+                              <span className="text-gray-400">Input:</span>
+                              <pre className="text-gray-300 bg-black/30 p-2 rounded mt-1">
+                                {result.input}
+                              </pre>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Expected Output:</span>
+                              <pre className="text-gray-300 bg-black/30 p-2 rounded mt-1">
+                                {result.expectedOutput}
+                              </pre>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Your Output:</span>
+                              <pre className={`p-2 rounded mt-1 ${
+                                result.passed ? 'text-green-300' : 'text-red-300'
+                              } bg-black/30`}>
+                                {result.actualOutput}
+                              </pre>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'output' && (
+                <div>
+                  {!testResults && !error && (
+                    <div className="text-center text-gray-400 py-8">
+                      Run your code to see the output here
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 text-red-400">
+                        <MdError className="w-5 h-5" />
+                        <span>{error}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {testResults && (
+                    <div className="space-y-4">
+                      {/* Score */}
+                      <div className="bg-violet-500/20 border border-violet-500/50 rounded-lg p-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-white mb-1">
+                            Score: {testResults.score}%
+                          </div>
+                          <div className="text-sm text-gray-300">
+                            {[...testResults.sampleResults, ...testResults.hiddenResults].filter(r => r.passed).length} / {testResults.sampleResults.length + testResults.hiddenResults.length} tests passed
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sample Results */}
+                      <div>
+                        <h4 className="text-white font-medium mb-3">Sample Test Results</h4>
+                        <div className="space-y-2">
+                          {testResults.sampleResults?.map((result, index) => (
+                            <div key={index} className={`rounded-lg p-4 border ${
+                              result.passed 
+                                ? 'bg-green-500/10 border-green-500/30' 
+                                : 'bg-red-500/10 border-red-500/30'
+                            }`}>
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-2">
+                                  {getTestResultIcon(result.passed)}
+                                  <span className="text-white font-medium">Test {index + 1}</span>
+                                </div>
+                                <span className={`text-sm font-medium ${
+                                  result.passed ? 'text-green-400' : 'text-red-400'
+                                }`}>
+                                  {result.passed ? 'Passed' : 'Failed'}
+                                </span>
+                              </div>
+                              
+                              <div className="space-y-2 text-sm">
+                                <div>
+                                  <span className="text-gray-400">Input:</span>
+                                  <pre className="text-gray-300 bg-black/30 p-2 rounded mt-1">
+                                    {result.input}
+                                  </pre>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400">Expected Output:</span>
+                                  <pre className="text-gray-300 bg-black/30 p-2 rounded mt-1">
+                                    {result.expectedOutput}
+                                  </pre>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400">Your Output:</span>
+                                  <pre className={`p-2 rounded mt-1 ${
+                                    result.passed ? 'text-green-300' : 'text-red-300'
+                                  } bg-black/30`}>
+                                    {result.actualOutput}
+                                  </pre>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Hidden Results */}
+                      {testResults.hiddenResults && testResults.hiddenResults.length > 0 && (
+                        <div>
+                          <h4 className="text-white font-medium mb-3">Hidden Test Results</h4>
+                          <div className="space-y-2">
+                            {testResults.hiddenResults.map((result, index) => (
+                              <div key={index} className={`rounded-lg p-3 border ${
+                                result.passed 
+                                  ? 'bg-green-500/10 border-green-500/30' 
+                                  : 'bg-red-500/10 border-red-500/30'
+                              }`}>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2">
+                                    {getTestResultIcon(result.passed)}
+                                    <span className="text-white text-sm">Hidden Test {index + 1}</span>
+                                  </div>
+                                  <span className={`text-xs font-medium ${
+                                    result.passed ? 'text-green-400' : 'text-red-400'
+                                  }`}>
+                                    {result.passed ? 'Passed' : 'Failed'}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Execution Stats */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                          <div className="text-gray-400 text-xs mb-1">Execution Time</div>
+                          <div className="text-white font-medium">{testResults.executionTime?.toFixed(2)}ms</div>
+                        </div>
+                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                          <div className="text-gray-400 text-xs mb-1">Memory Used</div>
+                          <div className="text-white font-medium">{testResults.memoryUsed?.toFixed(2)}MB</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

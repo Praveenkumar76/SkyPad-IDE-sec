@@ -1,6 +1,18 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_BACKEND_URL?.replace('/api', '') || 'http://localhost:5000';
+// Match the same logic as api.js for consistency
+// Remove '/api' suffix if present in VITE_BACKEND_URL
+const getSocketUrl = () => {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || 
+    (window.location.hostname === 'localhost' 
+      ? 'http://localhost:5000/api' 
+      : 'https://skypad-ide.onrender.com/api');
+  
+  // Remove '/api' suffix for WebSocket connection
+  return backendUrl.replace('/api', '');
+};
+
+const SOCKET_URL = getSocketUrl();
 
 let socket = null;
 

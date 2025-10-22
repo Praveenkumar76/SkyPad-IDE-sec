@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backend Connectivity Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    
+    .input-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+    }
+    
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .result {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      display: none;
+    }
+    
+    .result.success {
+      background: #d4edda;
+      border: 2px solid #28a745;
+      color: #155724;
+      display: block;
+    }
+    
+    .result.error {
+      background: #f8d7da;
+      border: 2px solid #dc3545;
+      color: #721c24;
+      display: block;
+    }
+    
+    .result.info {
+      background: #d1ecf1;
+      border: 2px solid #17a2b8;
+      color: #0c5460;
+      display: block;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    
+    .status-success {
+      background: #28a745;
+      color: white;
+    }
+    
+    .status-error {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .loader {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    .loader.active {
+      display: block;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Backend Connectivity Test</h1>
+    <p class="subtitle">Test if your backend API is accessible and responding correctly</p>
+    
+    <div class="input-group">
+      <label for="backendUrl">Backend URL</label>
+      <input 
+        type="text" 
+        id="backendUrl" 
+        value="https://skypad-ide.onrender.com/api"
+        placeholder="https://your-backend.com/api"
+      >
+    </div>
+    
+    <div class="button-group">
+      <button class="btn-primary" onclick="testHealth()">🏥 Test Health</button>
+      <button class="btn-secondary" onclick="testAuth()">🔐 Test Auth</button>
+    </div>
+    
+    <div class="loader" id="loader"></div>
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    const loader = document.getElementById('loader');
+    const result = document.getElementById('result');
+    const backendUrlInput = document.getElementById('backendUrl');
+
+    function getBackendUrl() {
+      let url = backendUrlInput.value.trim();
+      // Remove trailing slash if present
+      return url.replace(/\/$/, '');
+    }
+
+    function showLoader() {
+      loader.classList.add('active');
+      result.style.display = 'none';
+    }
+
+    function hideLoader() {
+      loader.classList.remove('active');
+    }
+
+    function showResult(type, message) {
+      hideLoader();
+      result.className = `result ${type}`;
+      result.textContent = message;
+    }
+
+    async function testHealth() {
+      showLoader();
+      const url = `${getBackendUrl()}/health`;
+      
+      try {
+        console.log('Testing health endpoint:', url);
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('text/html')) {
+          showResult('error', 
+            `❌ ERROR: Received HTML instead of JSON\n\n` +
+            `URL: ${url}\n` +
+            `Status: ${response.status} ${response.statusText}\n\n` +
+            `This usually means:\n` +
+            `1. The backend is not running at this URL\n` +
+            `2. The API route doesn't exist (404)\n` +
+            `3. You need to add '/api' to the URL\n\n` +
+            `Tip: Try visiting ${url} in your browser to see what's returned.`
+          );
+          return;
+        }
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          showResult('success', 
+            `✅ SUCCESS: Backend is responding!\n\n` +
+            `URL: ${url}\n` +
+            `Status: ${response.status} ${response.statusText}\n\n` +
+            `Response:\n${JSON.stringify(data, null, 2)}\n\n` +
+            `✅ Backend is healthy and ready to use!`
+          );
+        } else {
+          showResult('error', 
+            `⚠️ WARNING: Got response but status is not OK\n\n` +
+            `URL: ${url}\n` +
+            `Status: ${response.status} ${response.statusText}\n\n` +
+            `Response:\n${JSON.stringify(data, null, 2)}`
+          );
+        }
+      } catch (error) {
+        showResult('error', 
+          `❌ ERROR: Cannot connect to backend\n\n` +
+          `URL: ${url}\n` +
+          `Error: ${error.message}\n\n` +
+          `Possible causes:\n` +
+          `1. Backend is not running\n` +
+          `2. URL is incorrect\n` +
+          `3. CORS is blocking the request\n` +
+          `4. Network/firewall issues\n\n` +
+          `Tip: Try accessing the URL directly in your browser.`
+        );
+        console.error('Health check error:', error);
+      }
+    }
+
+    async function testAuth() {
+      showLoader();
+      const url = `${getBackendUrl()}/auth/login`;
+      
+      try {
+        console.log('Testing auth endpoint:', url);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            email: 'test@example.com',
+            password: 'testpassword'
+          })
+        });
+
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('text/html')) {
+          showResult('error', 
+            `❌ ERROR: Received HTML instead of JSON\n\n` +
+            `URL: ${url}\n` +
+            `Status: ${response.status} ${response.statusText}\n\n` +
+            `This is the exact error you see in Vercel!\n\n` +
+            `This usually means:\n` +
+            `1. The auth endpoint doesn't exist (404)\n` +
+            `2. The backend is not running\n` +
+            `3. Wrong URL or missing '/api' suffix`
+          );
+          return;
+        }
+
+        const data = await response.json();
+        
+        // We expect this to fail with 401 (invalid credentials), which is good!
+        if (response.status === 401 || response.status === 400) {
+          showResult('success', 
+            `✅ SUCCESS: Auth endpoint is working!\n\n` +
+            `URL: ${url}\n` +
+            `Status: ${response.status} ${response.statusText}\n\n` +
+            `Response:\n${JSON.stringify(data, null, 2)}\n\n` +
+            `✅ This is expected! The test credentials were rejected,\n` +
+            `but the endpoint is responding correctly with JSON.`
+          );
+        } else if (response.ok) {
+          showResult('info', 
+            `ℹ️ UNEXPECTED: Login succeeded with test credentials\n\n` +
+            `URL: ${url}\n` +
+            `Status: ${response.status} ${response.statusText}\n\n` +
+            `Response:\n${JSON.stringify(data, null, 2)}\n\n` +
+            `This might mean the backend is in mock mode.`
+          );
+        } else {
+          showResult('error', 
+            `⚠️ WARNING: Got unexpected response\n\n` +
+            `URL: ${url}\n` +
+            `Status: ${response.status} ${response.statusText}\n\n` +
+            `Response:\n${JSON.stringify(data, null, 2)}`
+          );
+        }
+      } catch (error) {
+        showResult('error', 
+          `❌ ERROR: Cannot connect to auth endpoint\n\n` +
+          `URL: ${url}\n` +
+          `Error: ${error.message}\n\n` +
+          `Possible causes:\n` +
+          `1. Backend is not running\n` +
+          `2. Auth route doesn't exist\n` +
+          `3. CORS is blocking the request\n` +
+          `4. Network/firewall issues`
+        );
+        console.error('Auth test error:', error);
+      }
+    }
+
+    // Test on page load
+    window.addEventListener('load', () => {
+      console.log('Backend Connectivity Test Tool loaded');
+      console.log('Ready to test:', getBackendUrl());
+    });
+  </script>
+</body>
+</html>
+

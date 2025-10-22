@@ -1,4 +1,8 @@
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+// Match the same logic as api.js for consistency
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 
+  (window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : 'https://skypad-ide.onrender.com/api');
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -7,6 +11,42 @@ const getAuthHeaders = () => {
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` })
   };
+};
+
+// Helper function to parse response with better error handling
+const parseResponse = async (response, actionName) => {
+  const contentType = response.headers.get('content-type');
+  
+  // Check if response is HTML instead of JSON (common when API is not found)
+  if (contentType && contentType.includes('text/html')) {
+    console.error(`Received HTML instead of JSON from ${response.url}`);
+    throw new Error(
+      `Backend API not found or not responding correctly. ` +
+      `Please ensure the backend is running and the API URL is correct. ` +
+      `(Expected JSON but got HTML - likely a 404 error)`
+    );
+  }
+  
+  // Try to parse JSON response
+  try {
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || `${actionName} failed`);
+    }
+    
+    return data;
+  } catch (error) {
+    // If JSON parsing fails
+    if (error instanceof SyntaxError) {
+      console.error(`Failed to parse JSON response from ${response.url}:`, error);
+      throw new Error(
+        `Backend returned invalid response. ` +
+        `The server may be down or misconfigured.`
+      );
+    }
+    throw error;
+  }
 };
 
 export const challengeAPI = {
@@ -18,11 +58,7 @@ export const challengeAPI = {
         headers: getAuthHeaders(),
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch problems');
-      }
-      
-      const data = await response.json();
+      const data = await parseResponse(response, 'Fetch problems');
       return data.problems || data || [];
     } catch (error) {
       console.error('Get problems error:', error);
@@ -39,12 +75,7 @@ export const challengeAPI = {
         body: JSON.stringify({ problemId }),
       });
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create room');
-      }
-      
-      return response.json();
+      return await parseResponse(response, 'Create room');
     } catch (error) {
       console.error('Create room error:', error);
       throw error;
@@ -60,12 +91,7 @@ export const challengeAPI = {
         body: JSON.stringify({ roomId }),
       });
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to join room');
-      }
-      
-      return response.json();
+      return await parseResponse(response, 'Join room');
     } catch (error) {
       console.error('Join room error:', error);
       throw error;
@@ -80,12 +106,7 @@ export const challengeAPI = {
         headers: getAuthHeaders(),
       });
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to get room details');
-      }
-      
-      return response.json();
+      return await parseResponse(response, 'Get room details');
     } catch (error) {
       console.error('Get room details error:', error);
       throw error;
@@ -101,12 +122,7 @@ export const challengeAPI = {
         body: JSON.stringify({ code, language }),
       });
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to submit code');
-      }
-      
-      return response.json();
+      return await parseResponse(response, 'Submit code');
     } catch (error) {
       console.error('Submit code error:', error);
       throw error;
@@ -121,16 +137,14 @@ export const challengeAPI = {
         headers: getAuthHeaders(),
       });
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to mark ready');
-      }
-      
-      return response.json();
+      return await parseResponse(response, 'Mark ready');
     } catch (error) {
       console.error('Mark ready error:', error);
       throw error;
     }
   }
 };
+
+// Log the API base URL on startup for debugging
+console.log('🎮 Challenge API Base URL:', API_BASE_URL);
 

@@ -3,12 +3,15 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
+const http = require('http');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
 
 const { connectToDatabase } = require('./db/mongoose');
+const { initializeSocketServer } = require('./socketServer');
 
 const app = express();
+const httpServer = http.createServer(app);
 
 // CORS configuration
 const corsOptions = {
@@ -48,11 +51,15 @@ if (process.env.NODE_ENV === 'production') {
 // Routers
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
-const problemsRouter = require('./routes/problems');
+const problemsRouter = require('./routes/problem'); // File is named 'problem.js' not 'problems.js'
+const challengesRouter = require('./routes/challenges');
+const contestsRouter = require('./routes/contests');
 const rewardsRouter = require('./routes/rewards');
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/problems', problemsRouter);
+app.use('/api/challenges', challengesRouter);
+app.use('/api/contests', contestsRouter);
 app.use('/api/rewards', rewardsRouter);
 
 // Health check
@@ -73,16 +80,21 @@ app.get('/', (_req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
+// Initialize Socket.io
+initializeSocketServer(httpServer);
+
 connectToDatabase().then(() => {
-  app.listen(PORT, () => {
+  httpServer.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`Backend listening on http://localhost:${PORT}`);
+    console.log(`WebSocket server ready`);
   });
 }).catch((error) => {
   console.warn('Database connection failed, but starting server anyway:', error.message);
-  app.listen(PORT, () => {
+  httpServer.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`Backend listening on http://localhost:${PORT} (without database)`);
+    console.log(`WebSocket server ready`);
   });
 });
 

@@ -34,7 +34,7 @@ const Login = () => {
       setShowSuccessPopup(true);
       setTimeout(() => {
         setShowSuccessPopup(false);
-        navigate('/dashboard');
+        navigate('/chat');
       }, 1200);
     } catch (error) {
       alert(error.message || 'Login failed');
@@ -63,7 +63,7 @@ const Login = () => {
       setShowSuccessPopup(true);
       setTimeout(() => {
         setShowSuccessPopup(false);
-        navigate('/dashboard');
+        navigate('/chat');
       }, 1200);
     } catch (error) {
       alert(error.message || 'Registration failed');

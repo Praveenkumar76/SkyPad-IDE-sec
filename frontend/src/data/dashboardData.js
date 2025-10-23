@@ -1,10 +1,22 @@
+const getUserData = () => {
+  if (typeof window !== 'undefined') {
+    return {
+      name: localStorage.getItem('userName') || 'John Durairaj',
+      title: localStorage.getItem('userTitle') || 'Software Engineer',
+      avatar: localStorage.getItem('userProfilePicture') || localStorage.getItem('userAvatar') || (localStorage.getItem('userName') ? localStorage.getItem('userName').substring(0, 2).toUpperCase() : 'JD'),
+      profilePictureUrl: localStorage.getItem('userProfilePicture') || null,
+    };
+  }
+  return {
+    name: 'John Durairaj',
+    title: 'Software Engineer',
+    avatar: 'JD',
+    profilePictureUrl: null,
+  };
+};
+
 export const dashboardData = {
-  user: {
-    name: localStorage.getItem('userName') || 'John Durairaj',
-    title: localStorage.getItem('userTitle') || 'Software Engineer',
-    avatar: localStorage.getItem('userProfilePicture') || localStorage.getItem('userAvatar') || (localStorage.getItem('userName') ? localStorage.getItem('userName').substring(0, 2).toUpperCase() : 'JD'),
-    profilePictureUrl: localStorage.getItem('userProfilePicture') || null,
-  },
+  user: getUserData(),
   company: {
     name: "SKYPAD-IDE",
     logo: "/logo.png"

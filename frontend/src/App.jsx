@@ -3,7 +3,9 @@ import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navig
 import Hero from './components/Hero';
 import SignUp from './components/SignUp';
 import Login from './components/Login';
+import Chat from './components/Chat';
 import Dashboard from './components/Dashboard';
+import TestComponent from './components/TestComponent';
 import Problems from './components/Problems';
 import CodeEditor from './components/CodeEditor';
 import Profile from './components/Profile';
@@ -12,8 +14,15 @@ import ProblemSolver from './components/ProblemSolver';
 import DSASheet from './components/DSASheet';
 import Challenges from './components/Challenges';
 import Rewards from './components/Rewards';
-import ChallengeRoom from './components/ChallengeRoom';
 import InterviewExamine from './components/InterviewExamine';
+import Challenges1v1 from './components/Challenges1v1';
+import ChallengeLobby from './components/ChallengeLobby';
+import CodeDuelIDE from './components/CodeDuelIDE';
+import ChallengeResults from './components/ChallengeResults';
+import ContestCreation from './components/ContestCreation';
+import JoinContest from './components/JoinContest';
+import ContestInterface from './components/ContestInterface';
+import ContestLeaderboard from './components/ContestLeaderboard';
 import './App.css';
 
 function HeroWithNav() {
@@ -46,6 +55,7 @@ function App() {
           <Route path="/" element={<HeroWithNav />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/chat" element={<Chat />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/problems" element={<Problems />} />
           <Route path="/code-editor" element={<CodeEditor />} />
@@ -54,8 +64,15 @@ function App() {
           <Route path="/solve/:id" element={<ProblemSolver />} />
           <Route path="/dsa-sheet" element={<DSASheet />} />
           <Route path="/challenges" element={<Challenges />} />
+          <Route path="/create-contest" element={<ContestCreation />} />
+          <Route path="/join-contest" element={<JoinContest />} />
+          <Route path="/contest/:contestId" element={<ContestInterface />} />
+          <Route path="/contest/:contestId/leaderboard" element={<ContestLeaderboard />} />
+          <Route path="/challenges/1v1" element={<Challenges1v1 />} />
+          <Route path="/challenge/:roomId/lobby" element={<ChallengeLobby />} />
+          <Route path="/challenge/:roomId/duel" element={<CodeDuelIDE />} />
+          <Route path="/challenge/:roomId/results" element={<ChallengeResults />} />
           <Route path="/rewards" element={<Rewards />} />
-          <Route path="/challenge-room/:roomId" element={<ChallengeRoom />} />
           <Route path="/interview-examine" element={<InterviewExamineRedirect />} />
           <Route path="/interview-examine/:sessionId" element={<InterviewExamineRedirect />} />
           <Route path="/interv-examine" element={<InterviewExamine />} />

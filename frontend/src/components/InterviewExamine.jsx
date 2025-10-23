@@ -32,7 +32,7 @@ const InterviewExamine = () => {
   const socketRef = useRef(null);
 
   // Configure socket URL (Render/production) with fallback to local
-  const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001';
+  const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
   const languages = [
     { value: 'JavaScript', label: 'JavaScript' },

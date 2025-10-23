@@ -316,30 +316,16 @@ const Profile = () => {
   };
 
   return (
-    <div 
-      className="min-h-screen pt-20 p-6 relative overflow-hidden"
-      style={{
-        background: `
-          linear-gradient(135deg, #667eea 0%, #764ba2 100%),
-          radial-gradient(circle at 20% 80%, rgba(255,105,180,0.4) 0%, transparent 50%),
-          radial-gradient(circle at 80% 20%, rgba(255,165,0,0.4) 0%, transparent 50%),
-          radial-gradient(circle at 40% 40%, rgba(120,119,198,0.3) 0%, transparent 50%)
-        `,
-        backgroundBlendMode: 'multiply, overlay, overlay, normal'
-      }}
-    >
-      {/* Mountain silhouette overlay */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          background: `
-            linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.1) 30%, rgba(0,0,0,0.4) 70%, rgba(0,0,0,0.8) 100%),
-            linear-gradient(45deg, transparent 60%, rgba(139,69,19,0.3) 70%, rgba(160,82,45,0.4) 80%, rgba(101,67,33,0.5) 90%, rgba(62,39,35,0.6) 100%)
-          `
-        }}
-      />
+    <div className="min-h-screen bg-black text-white pt-20">
+      {/* Background gradient matching landing page */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-violet-900/20 to-black"></div>
+      
+      {/* Background watermark */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-5 select-none pointer-events-none watermark-pulse">
+        <span className="text-9xl font-bold text-violet-400">PROFILE</span>
+      </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto">
+      <div className="relative z-10 max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <BackButton to="/dashboard" text="Back to Dashboard" />
@@ -347,19 +333,19 @@ const Profile = () => {
           <div className="flex items-center space-x-4">
             <button
               onClick={addTestProblemSolve}
-              className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 px-4 py-2 rounded-lg border border-green-500/30 hover:from-green-500/30 hover:to-emerald-500/30 transition-all duration-300 flex items-center space-x-2"
+              className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-violet-500/25 flex items-center space-x-2"
             >
               <MdCode className="w-5 h-5" />
               <span>Solve Test Problem</span>
             </button>
             <button
               onClick={() => navigate('/code-editor')}
-              className="bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-300 px-4 py-2 rounded-lg border border-violet-500/30 hover:from-violet-500/30 hover:to-purple-500/30 transition-all duration-300 flex items-center space-x-2"
+              className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-violet-500/25 flex items-center space-x-2"
             >
               <MdCode className="w-5 h-5" />
               <span>Code Editor</span>
             </button>
-            <button className="bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-300 px-4 py-2 rounded-lg border border-violet-500/30 hover:from-violet-500/30 hover:to-purple-500/30 transition-all duration-300 flex items-center space-x-2">
+            <button className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-violet-500/25 flex items-center space-x-2">
               <MdSettings className="w-5 h-5" />
               <span>Settings</span>
             </button>
@@ -370,7 +356,7 @@ const Profile = () => {
           {/* Left Column - Profile Info */}
           <div className="lg:col-span-1 space-y-6">
             {/* Profile Card */}
-            <div className="backdrop-blur-lg bg-white/10 rounded-3xl border border-white/20 p-8 shadow-2xl">
+            <div className="bg-violet-900/20 rounded-lg border border-violet-500/20 p-8 shadow-2xl transition-transform duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-violet-500/20">
               <div className="text-center">
                 {/* Profile Picture */}
                 <div className="relative inline-block mb-6">
@@ -388,7 +374,7 @@ const Profile = () => {
                   {isEditing && (
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-2 right-2 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center shadow-lg hover:bg-violet-700 transition-colors"
+                      className="absolute bottom-2 right-2 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center shadow-lg hover:bg-violet-700 transition-all duration-300 transform hover:scale-105"
                     >
                       <MdPhotoCamera className="w-5 h-5 text-white" />
                     </button>
@@ -404,14 +390,14 @@ const Profile = () => {
 
                 {/* Basic Info */}
                 <h1 className="text-2xl font-bold text-white mb-2">{profileData.name}</h1>
-                <p className="text-violet-300 mb-4 capitalize">{profileData.role}</p>
+                <p className="text-violet-400 mb-4 capitalize">{profileData.role}</p>
                 
                 {/* Edit Button */}
                 <div className="mb-6">
                   {!isEditing ? (
                     <button
                       onClick={handleEdit}
-                      className="bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-300 px-6 py-2 rounded-lg border border-violet-500/30 hover:from-violet-500/30 hover:to-purple-500/30 transition-all duration-300 flex items-center space-x-2 mx-auto"
+                      className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-violet-500/25 flex items-center space-x-2 mx-auto"
                     >
                       <MdEdit className="w-4 h-4" />
                       <span>Edit Profile</span>
@@ -420,14 +406,14 @@ const Profile = () => {
                     <div className="flex space-x-3">
                       <button
                         onClick={handleSave}
-                        className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 px-4 py-2 rounded-lg border border-green-500/30 hover:from-green-500/30 hover:to-emerald-500/30 transition-all duration-300 flex items-center space-x-2"
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25 flex items-center space-x-2"
                       >
                         <MdSave className="w-4 h-4" />
                         <span>Save</span>
                       </button>
                       <button
                         onClick={handleCancel}
-                        className="bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-300 px-4 py-2 rounded-lg border border-red-500/30 hover:from-red-500/30 hover:to-pink-500/30 transition-all duration-300 flex items-center space-x-2"
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-red-500/25 flex items-center space-x-2"
                       >
                         <MdCancel className="w-4 h-4" />
                         <span>Cancel</span>
@@ -445,10 +431,10 @@ const Profile = () => {
                         type="email"
                         value={profileData.email}
                         onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="flex-1 bg-white/20 text-white px-3 py-1 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="flex-1 bg-violet-900/30 text-white px-3 py-1 rounded-lg border border-violet-500/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                       />
                     ) : (
-                      <span className="text-white/70">{profileData.email}</span>
+                      <span className="text-gray-300">{profileData.email}</span>
                     )}
                   </div>
 
@@ -458,13 +444,13 @@ const Profile = () => {
                       <select
                         value={profileData.role}
                         onChange={(e) => handleInputChange('role', e.target.value)}
-                        className="flex-1 bg-white/20 text-white px-3 py-1 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="flex-1 bg-violet-900/30 text-white px-3 py-1 rounded-lg border border-violet-500/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                       >
                         <option value="student">Student</option>
                         <option value="employee">Employee</option>
                       </select>
                     ) : (
-                      <span className="text-white/70 capitalize">{profileData.role}</span>
+                      <span className="text-gray-300 capitalize">{profileData.role}</span>
                     )}
                   </div>
 
@@ -480,10 +466,10 @@ const Profile = () => {
                         value={profileData.company}
                         onChange={(e) => handleInputChange('company', e.target.value)}
                         placeholder={profileData.role === 'student' ? 'College/University' : 'Company'}
-                        className="flex-1 bg-white/20 text-white px-3 py-1 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50 placeholder-white/50"
+                        className="flex-1 bg-violet-900/30 text-white px-3 py-1 rounded-lg border border-violet-500/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50 placeholder-gray-400"
                       />
                     ) : (
-                      <span className="text-white/70">{profileData.company}</span>
+                      <span className="text-gray-300">{profileData.company}</span>
                     )}
                   </div>
 
@@ -496,18 +482,18 @@ const Profile = () => {
                           value={profileData.city}
                           onChange={(e) => handleInputChange('city', e.target.value)}
                           placeholder="City"
-                          className="flex-1 bg-white/20 text-white px-3 py-1 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50 placeholder-white/50"
+                          className="flex-1 bg-violet-900/30 text-white px-3 py-1 rounded-lg border border-violet-500/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50 placeholder-gray-400"
                         />
                         <input
                           type="text"
                           value={profileData.state}
                           onChange={(e) => handleInputChange('state', e.target.value)}
                           placeholder="State"
-                          className="flex-1 bg-white/20 text-white px-3 py-1 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50 placeholder-white/50"
+                          className="flex-1 bg-violet-900/30 text-white px-3 py-1 rounded-lg border border-violet-500/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50 placeholder-gray-400"
                         />
                       </div>
                     ) : (
-                      <span className="text-white/70">{profileData.city}, {profileData.state}</span>
+                      <span className="text-gray-300">{profileData.city}, {profileData.state}</span>
                     )}
                   </div>
 
@@ -518,10 +504,10 @@ const Profile = () => {
                         type="number"
                         value={profileData.age}
                         onChange={(e) => handleInputChange('age', parseInt(e.target.value))}
-                        className="flex-1 bg-white/20 text-white px-3 py-1 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="flex-1 bg-violet-900/30 text-white px-3 py-1 rounded-lg border border-violet-500/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                       />
                     ) : (
-                      <span className="text-white/70">{profileData.age} years old</span>
+                      <span className="text-gray-300">{profileData.age} years old</span>
                     )}
                   </div>
 
@@ -531,14 +517,14 @@ const Profile = () => {
                       <select
                         value={profileData.gender}
                         onChange={(e) => handleInputChange('gender', e.target.value)}
-                        className="flex-1 bg-white/20 text-white px-3 py-1 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="flex-1 bg-violet-900/30 text-white px-3 py-1 rounded-lg border border-violet-500/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                       >
                         <option value="male">Male</option>
                         <option value="female">Female</option>
                         <option value="other">Other</option>
                       </select>
                     ) : (
-                      <span className="text-white/70 capitalize">{profileData.gender}</span>
+                      <span className="text-gray-300 capitalize">{profileData.gender}</span>
                     )}
                   </div>
                 </div>
@@ -546,7 +532,7 @@ const Profile = () => {
             </div>
 
             {/* Quick Stats */}
-            <div className="backdrop-blur-lg bg-white/10 rounded-3xl border border-white/20 p-6 shadow-2xl">
+            <div className="bg-violet-900/20 rounded-lg border border-violet-500/20 p-6 shadow-2xl transition-transform duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-violet-500/20">
               <h3 className="text-white font-semibold mb-4">Quick Stats</h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">

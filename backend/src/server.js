@@ -49,9 +49,11 @@ if (process.env.NODE_ENV === 'production') {
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const problemsRouter = require('./routes/problems');
+const rewardsRouter = require('./routes/rewards');
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/problems', problemsRouter);
+app.use('/api/rewards', rewardsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -12,6 +12,7 @@ import {
   MdPerson
 } from 'react-icons/md';
 import { dsaSheetData } from '../data/dsaSheetData';
+import { userAPI } from '../utils/api';
 
 const ProblemSolver = () => {
   const { id } = useParams();
@@ -73,6 +74,22 @@ char* solve(char* input) {
   const checkIfSolved = () => {
     const solvedProblems = JSON.parse(localStorage.getItem('solvedProblems') || '[]');
     setIsSubmitted(solvedProblems.includes(id));
+  };
+
+  const recordProblemSolve = async () => {
+    try {
+      return await userAPI.solveProblem({
+        problemId: id,
+        title: problem.title,
+        difficulty: problem.difficulty,
+        topic: problem.topic,
+        timeSpent: 0,
+        language: selectedLanguage
+      });
+    } catch (error) {
+      console.error('Error recording problem solve:', error);
+      return null;
+    }
   };
 
   useEffect(() => {
@@ -196,7 +213,10 @@ char* solve(char* input) {
       const allTestsPass = [...runResult.sampleResults, ...runResult.hiddenResults].every(test => test.passed);
       
       if (allTestsPass) {
-        // Mark as solved
+        // Record problem solve in backend and award rewards
+        const rewardResult = await recordProblemSolve();
+        
+        // Mark as solved locally
         const solvedProblems = JSON.parse(localStorage.getItem('solvedProblems') || '[]');
         if (!solvedProblems.includes(id)) {
           solvedProblems.push(id);
@@ -204,7 +224,16 @@ char* solve(char* input) {
         }
         setIsSubmitted(true);
         setTestResults(runResult);
-        alert('Congratulations! Problem solved successfully! 🎉');
+        // Flag rewards as dirty so Rewards page picks up new balances immediately
+        try { localStorage.setItem('rewardsNeedsRefresh', '1'); } catch {}
+        
+        // Show success message with rewards
+        if (rewardResult && rewardResult.rewards) {
+          const rewardMessage = `Congratulations! Problem solved successfully! 🎉\nYou earned ${Math.round(rewardResult.rewards.xp)} XP and ${Math.round(rewardResult.rewards.coins)} coins!${rewardResult.rewards.leveledUp ? `\n🎊 Level Up! You're now level ${rewardResult.rewards.newLevel}!` : ''}`;
+          alert(rewardMessage);
+        } else {
+          alert('Solved!');
+        }
       } else {
         setTestResults(runResult);
         alert('Some test cases failed. Please fix your solution and try again.');

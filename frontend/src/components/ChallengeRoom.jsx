@@ -382,11 +382,20 @@ const ChallengeRoom = () => {
 
   const runCode = async () => {
     if (!code.trim() || !selectedProblem) return;
-    
+
     setIsRunning(true);
     try {
       const token = localStorage.getItem('token');
       const lang = (selectedLanguage || 'JavaScript').toLowerCase();
+
+      // Always include inline problem definition to ensure testcases exist even without DB
+      const inlineProblem = {
+        sampleTestCases: selectedProblem.sampleTestCases || selectedProblem.problem?.sampleTestCases || [],
+        hiddenTestCases: selectedProblem.hiddenTestCases || selectedProblem.problem?.hiddenTestCases || [],
+        allowedLanguages: selectedProblem.allowedLanguages || selectedProblem.problem?.allowedLanguages || ['JavaScript', 'Python'],
+        timeLimit: selectedProblem.timeLimit || 1000,
+      };
+
       const response = await fetch('http://localhost:5000/api/problems/run', {
         method: 'POST',
         headers: {
@@ -397,13 +406,7 @@ const ChallengeRoom = () => {
           problemId: selectedProblem._id || selectedProblem.id,
           code,
           language: lang,
-          // Provide inline testcases when using sample (non-DB) problems
-          problem: !selectedProblem._id ? {
-            sampleTestCases: selectedProblem.sampleTestCases || [],
-            hiddenTestCases: selectedProblem.hiddenTestCases || [],
-            allowedLanguages: selectedProblem.allowedLanguages || ['JavaScript', 'Python'],
-            timeLimit: 1000
-          } : undefined
+          problem: inlineProblem,
         })
       });
       if (!response.ok) {
@@ -413,21 +416,24 @@ const ChallengeRoom = () => {
       const result = await response.json();
       setTestResults(result);
 
-      // Build output log
+      // Build output log with robust field support
       const details = [];
       const renderTests = (arr, label) => {
         (arr || []).forEach((t, idx) => {
-          details.push(`[${label} ${idx + 1}]\nInput:\n${t.input ?? ''}\nExpected:\n${t.expectedOutput ?? ''}\nActual:\n${t.actualOutput ?? ''}\nResult: ${t.passed ? 'PASS' : 'FAIL'}\n`);
+          const expected = t.expectedOutput ?? t.expected ?? t.output ?? '';
+          const actual = t.actualOutput ?? t.output ?? '';
+          const input = t.input ?? t.stdin ?? '';
+          details.push(`[${label} ${idx + 1}]\nInput:\n${input}\nExpected:\n${expected}\nActual:\n${actual}\nResult: ${t.passed ? 'PASS' : 'FAIL'}\n`);
         });
       };
       renderTests(result.sampleResults, 'Sample');
       renderTests(result.hiddenResults, 'Hidden');
       setExecOutput(details.join('\n'));
-      
+
       // Update scores based on actual results
       const totalTests = (result.sampleResults?.length || 0) + (result.hiddenResults?.length || 0);
       const passedTests = [...(result.sampleResults || []), ...(result.hiddenResults || [])].filter(t => t.passed).length;
-      
+
       const playerId = localStorage.getItem('userId');
       const playerScore = {
         passed: passedTests,
@@ -440,7 +446,7 @@ const ChallengeRoom = () => {
         [playerId]: playerScore
       };
       setScores(newScores);
-      
+
       // Update room with new scores
       const updatedRoom = {
         ...room,
@@ -452,11 +458,14 @@ const ChallengeRoom = () => {
       try {
         socketRef.current?.emit('score-update', { roomId, playerId, score: playerScore });
       } catch {}
-      
+
+      // Return result for callers (e.g., submitCode)
+      return result;
     } catch (error) {
       console.error('Error running code:', error);
       setExecOutput(`Execution error: ${error.message || 'failed'}`);
       alert(error.message || 'Execution failed');
+      return null;
     } finally {
       setIsRunning(false);
     }
@@ -464,14 +473,12 @@ const ChallengeRoom = () => {
 
   const submitCode = async () => {
     if (!code.trim() || !selectedProblem) return;
-    
+
     setIsRunning(true);
     try {
-      // Run code first to get results
-      await runCode();
+      // Run code first to get fresh results
+      const res = await runCode();
       
-      // Recalculate from latest testResults state after runCode
-      const res = testResults;
       const totalTests = (res?.sampleResults?.length || 0) + (res?.hiddenResults?.length || 0);
       const passedTests = [...(res?.sampleResults || []), ...(res?.hiddenResults || [])].filter(t => t.passed).length;
       

@@ -1,8 +1,5 @@
-// Match the same logic as api.js for consistency
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 
-  (window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000/api' 
-    : 'https://skypad-ide.onrender.com/api');
+// Use relative path to leverage Vite proxy
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {

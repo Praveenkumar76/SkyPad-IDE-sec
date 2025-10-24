@@ -218,7 +218,7 @@ const QuestionUpload = () => {
         throw new Error('Please log in to upload questions');
       }
 
-      const response = await fetch('http://localhost:5000/api/problems', {
+      const response = await fetch('/api/problems', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

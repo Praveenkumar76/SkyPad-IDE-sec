@@ -46,7 +46,7 @@ const ContestInterface = () => {
       }
 
       // Fetch contest questions
-      const response = await fetch(`http://localhost:5000/api/contests/${contestId}/questions`, {
+      const response = await fetch(`/api/contests/${contestId}/questions`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -132,7 +132,7 @@ const ContestInterface = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/contests/${contestId}/submit`, {
+      const response = await fetch(`/api/contests/${contestId}/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

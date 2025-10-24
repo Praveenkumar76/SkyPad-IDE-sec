@@ -83,7 +83,7 @@ const ProblemSolver = () => {
       }
 
       // Otherwise fetch from API
-      const response = await fetch(`http://localhost:5000/api/problems/${id}`);
+      const response = await fetch(`/api/problems/${id}`);
       if (!response.ok) {
         throw new Error('Problem not found');
       }
@@ -124,7 +124,7 @@ const ProblemSolver = () => {
     setActiveTab('output'); // Switch to output tab when running
 
     try {
-      const response = await fetch('http://localhost:5000/api/problems/run', {
+      const response = await fetch('/api/problems/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,7 +162,7 @@ const ProblemSolver = () => {
 
     try {
       // First run the code to check if it passes all tests
-      const runResponse = await fetch('http://localhost:5000/api/problems/run', {
+      const runResponse = await fetch('/api/problems/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -194,7 +194,7 @@ const ProblemSolver = () => {
         
         // Record problem solve in backend
         try {
-          const recordResponse = await fetch('http://localhost:5000/api/users/solve-problem', {
+          const recordResponse = await fetch('/api/users/solve-problem', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

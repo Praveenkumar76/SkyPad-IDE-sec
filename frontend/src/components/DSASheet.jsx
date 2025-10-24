@@ -52,7 +52,7 @@ const DSASheet = () => {
 
   const checkAndAddExistingProblems = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/problems', {
+      const response = await fetch('/api/problems', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

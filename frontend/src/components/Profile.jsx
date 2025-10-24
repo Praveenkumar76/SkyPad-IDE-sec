@@ -86,13 +86,13 @@ const Profile = () => {
 
         // Fetch real user statistics from database
         const [statsResponse, activityResponse] = await Promise.all([
-          fetch('http://localhost:5000/api/users/stats', {
+          fetch('/api/users/stats', {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             }
           }),
-          fetch('http://localhost:5000/api/users/recent-activity', {
+          fetch('/api/users/recent-activity', {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -140,7 +140,7 @@ const Profile = () => {
       });
       
       // Update backend
-      const response = await fetch('http://localhost:5000/api/users/profile', {
+      const response = await fetch('/api/users/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -253,7 +253,7 @@ const Profile = () => {
       const randomProblem = testProblems[Math.floor(Math.random() * testProblems.length)];
       
       // Record problem solve in database
-      const response = await fetch('http://localhost:5000/api/users/solve-problem', {
+      const response = await fetch('/api/users/solve-problem', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -275,13 +275,13 @@ const Profile = () => {
         
         // Refresh the stats from database
         const [statsResponse, activityResponse] = await Promise.all([
-          fetch('http://localhost:5000/api/users/stats', {
+          fetch('/api/users/stats', {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             }
           }),
-          fetch('http://localhost:5000/api/users/recent-activity', {
+          fetch('/api/users/recent-activity', {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'

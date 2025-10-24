@@ -181,7 +181,7 @@ const CodeDuelIDE = () => {
 
     try {
       // Call backend API to run against all test cases (sample + hidden)
-      const response = await fetch('http://localhost:5000/api/problems/run', {
+      const response = await fetch('/api/problems/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

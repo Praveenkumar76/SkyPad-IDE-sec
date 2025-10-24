@@ -41,7 +41,7 @@ const ContestLeaderboard = () => {
       }
 
       // Fetch contest info first
-      const contestResponse = await fetch(`http://localhost:5000/api/contests/${contestId}`);
+      const contestResponse = await fetch(`/api/contests/${contestId}`);
       if (!contestResponse.ok) {
         throw new Error('Contest not found');
       }
@@ -49,7 +49,7 @@ const ContestLeaderboard = () => {
       setContestInfo(contestData);
 
       // Fetch leaderboard
-      const leaderboardResponse = await fetch(`http://localhost:5000/api/contests/${contestId}/leaderboard`);
+      const leaderboardResponse = await fetch(`/api/contests/${contestId}/leaderboard`);
       if (!leaderboardResponse.ok) {
         throw new Error('Failed to fetch leaderboard');
       }

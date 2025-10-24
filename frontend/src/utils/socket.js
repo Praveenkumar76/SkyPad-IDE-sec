@@ -1,15 +1,15 @@
 import { io } from 'socket.io-client';
 
-// Match the same logic as api.js for consistency
-// Remove '/api' suffix if present in VITE_BACKEND_URL
+// For WebSocket connections, we need the actual backend URL
+// Note: Vite proxy doesn't support WebSocket connections
 const getSocketUrl = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 
     (window.location.hostname === 'localhost' 
-      ? 'http://localhost:5000/api' 
-      : 'https://skypad-ide.onrender.com/api');
+      ? 'http://localhost:5000' 
+      : 'https://skypad-ide.onrender.com');
   
-  // Remove '/api' suffix for WebSocket connection
-  return backendUrl.replace('/api', '');
+  // WebSocket connections don't use '/api' suffix
+  return backendUrl;
 };
 
 const SOCKET_URL = getSocketUrl();

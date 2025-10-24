@@ -61,7 +61,7 @@ const JoinContest = () => {
         throw new Error('Please log in to join contests');
       }
 
-      const response = await fetch('http://localhost:5000/api/contests/join', {
+      const response = await fetch('/api/contests/join', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

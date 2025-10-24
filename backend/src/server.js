@@ -51,7 +51,7 @@ if (process.env.NODE_ENV === 'production') {
 // Routers
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
-const problemsRouter = require('./routes/problem'); // File is named 'problem.js' not 'problems.js'
+const problemsRouter = require('./routes/problems'); // Use the REAL execution system
 const challengesRouter = require('./routes/challenges');
 const contestsRouter = require('./routes/contests');
 const rewardsRouter = require('./routes/rewards');

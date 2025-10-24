@@ -282,7 +282,7 @@ const ContestCreation = () => {
         selectedSlot: requestData.timeSlots?.find(s => s.isSelected)
       });
 
-      const response = await fetch('http://localhost:5000/api/contests/create', {
+      const response = await fetch('/api/contests/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

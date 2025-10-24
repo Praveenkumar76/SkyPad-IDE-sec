@@ -1,9 +1,5 @@
-// The backend URL is now loaded from an environment variable.
-// It will use your public Render URL in production and fall back to localhost for local development.
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 
-  (window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000/api' 
-    : 'https://skypad-ide.onrender.com/api');
+// Use relative path to leverage Vite proxy
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {

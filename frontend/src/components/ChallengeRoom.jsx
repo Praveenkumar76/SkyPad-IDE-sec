@@ -221,7 +221,7 @@ const ChallengeRoom = () => {
     try {
       setLoadingProblems(true);
       setProblemsError(false);
-      const response = await fetch('http://localhost:5000/api/problems', {
+      const response = await fetch('/api/problems', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -396,7 +396,7 @@ const ChallengeRoom = () => {
         timeLimit: selectedProblem.timeLimit || 1000,
       };
 
-      const response = await fetch('http://localhost:5000/api/problems/run', {
+      const response = await fetch('/api/problems/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -51,6 +51,14 @@ const InterviewExamine = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
+  // Always keep shareLink synced with current route/session id
+  useEffect(() => {
+    const id = sessionId || session?.id;
+    if (id && typeof window !== 'undefined') {
+      setShareLink(`${window.location.origin}/interv-examine/${id}`);
+    }
+  }, [sessionId, session?.id]);
+
   // Socket connect/join room and listeners
   useEffect(() => {
     // Connect once
@@ -159,6 +167,11 @@ const InterviewExamine = () => {
     };
     setSession(updatedSession);
     localStorage.setItem(`interviewSession_${sessionId}`, JSON.stringify(updatedSession));
+
+    // Ensure shareLink exists for participants
+    if (typeof window !== 'undefined') {
+      setShareLink(`${window.location.origin}/interv-examine/${sessionId}`);
+    }
   };
 
   const generateSessionId = () => {
@@ -295,7 +308,9 @@ const InterviewExamine = () => {
   };
 
   const copyShareLink = () => {
-    navigator.clipboard.writeText(shareLink);
+    const link = shareLink || (typeof window !== 'undefined' ? window.location.href : '');
+    if (!link) return;
+    navigator.clipboard.writeText(link);
     alert('Share link copied to clipboard!');
   };
 
@@ -332,12 +347,30 @@ const InterviewExamine = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {/* Shareable Link Control - Always Visible */}
+              <div className="flex items-center bg-white/10 border border-white/20 rounded-lg overflow-hidden">
+                <input
+                  type="text"
+                  readOnly
+                  value={shareLink}
+                  placeholder="Generating link..."
+                  className="px-3 py-2 bg-transparent text-white text-sm w-48 md:w-64 outline-none placeholder-gray-400"
+                />
+                <button
+                  onClick={copyShareLink}
+                  className="px-3 py-2 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 transition-colors"
+                  title="Copy share link"
+                >
+                  <MdCopyAll className="w-4 h-4" />
+                </button>
+              </div>
               <button
                 onClick={copyShareLink}
-                className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
               >
                 <MdShare className="w-4 h-4" />
-                <span>Share Link</span>
+                <span className="hidden sm:inline">Share Session</span>
+                <span className="sm:hidden">Share</span>
               </button>
               <DashboardNavbar />
             </div>
@@ -375,6 +408,34 @@ const InterviewExamine = () => {
                     >
                       <MdPlayArrow className="w-4 h-4" />
                       <span>{isRunning ? 'Running...' : 'Run Code'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Collaboration Info */}
+              <div className="bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 backdrop-blur-md rounded-xl p-4 border border-violet-400/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <MdShare className="w-5 h-5 text-violet-300" />
+                    <div>
+                      <h4 className="text-white font-semibold">Invite Others to Collaborate</h4>
+                      <p className="text-gray-300 text-sm">Share this link so others can join and code together</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={shareLink}
+                      className="px-3 py-2 bg-black/20 border border-white/20 rounded text-white text-sm w-64 outline-none"
+                    />
+                    <button
+                      onClick={copyShareLink}
+                      className="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                    >
+                      <MdCopyAll className="w-4 h-4" />
+                      <span>Copy</span>
                     </button>
                   </div>
                 </div>

@@ -30,7 +30,7 @@ const Problems = () => {
 
   const addExistingProblemsToDSASheet = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/problems');
+      const response = await fetch('/api/problems');
       if (response.ok) {
         const data = await response.json();
         const problems = data.problems || [];
@@ -108,7 +108,7 @@ const Problems = () => {
   const fetchProblems = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/problems');
+      const response = await fetch('/api/problems');
       if (!response.ok) {
         throw new Error('Failed to fetch problems');
       }

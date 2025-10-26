@@ -319,6 +319,22 @@ const CodeDuelIDE = () => {
         socket.emit('code-submitted', { roomId });
       }
 
+      // Check if match finished during submission (race condition)
+      if (result.result === 'finished' || result.matchFinished) {
+        setMatchFinished(true);
+        setMatchStatus('finished');
+        const message = result.isWinner 
+          ? '🎉 Congratulations! You won the match!\n\nRedirecting to results...'
+          : '⏰ Match ended! Your opponent finished first.\n\nRedirecting to results...';
+        setOutput(message);
+        
+        // Redirect to results after delay
+        setTimeout(() => {
+          navigate(`/challenge/${roomId}/results`);
+        }, 2000);
+        return;
+      }
+
       // Process results
       const totalTests = result.testResults?.length || 0;
       const passedTests = result.testResults?.filter(t => t.passed).length || 0;

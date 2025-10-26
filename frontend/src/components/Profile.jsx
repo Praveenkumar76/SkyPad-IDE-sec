@@ -537,37 +537,49 @@ const Profile = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-white/70">Problems Solved</span>
-                  <span className="text-violet-400 font-bold">{stats.problemsSolved}</span>
+                  <span className="text-violet-400 font-bold">{stats.problemsSolved || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/70">Win Rate</span>
-                  <span className="text-green-400 font-bold">{(stats.winLossRatio * 100).toFixed(1)}%</span>
+                  <span className="text-green-400 font-bold">
+                    {stats.winLossRatio ? (stats.winLossRatio * 100).toFixed(1) : 0}%
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/70">Current Streak</span>
-                  <span className="text-yellow-400 font-bold">{stats.currentStreak} days</span>
+                  <span className="text-yellow-400 font-bold">{stats.currentStreak || 0} days</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/70">Global Rank</span>
-                  <span className="text-purple-400 font-bold">#{stats.rank}</span>
+                  <span className="text-purple-400 font-bold">
+                    {stats.rank ? `#${stats.rank}` : 'Unranked'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/70">Weekly Activity</span>
-                  <span className="text-blue-400 font-bold">{stats.weeklyActivity} problems</span>
+                  <span className="text-blue-400 font-bold">{stats.weeklyActivity || 0} problems</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/70">Total Time</span>
-                  <span className="text-cyan-400 font-bold">{stats.totalTimeSpent}h</span>
+                  <span className="text-cyan-400 font-bold">{stats.totalTimeSpent || 0}h</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/70">Favorite Topic</span>
-                  <span className="text-pink-400 font-bold">{stats.favoriteTopic}</span>
+                  <span className="text-pink-400 font-bold">{stats.favoriteTopic || 'None yet'}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/70">Last Active</span>
-                  <span className="text-orange-400 font-bold">{stats.lastActive}</span>
+                  <span className="text-orange-400 font-bold">{stats.lastActive || 'Just now'}</span>
                 </div>
               </div>
+              
+              {stats.problemsSolved === 0 && (
+                <div className="mt-4 pt-4 border-t border-violet-500/20">
+                  <p className="text-xs text-gray-400 text-center">
+                    🚀 Start solving problems to build your stats!
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -671,28 +683,45 @@ const Profile = () => {
             <div className="backdrop-blur-lg bg-white/10 rounded-3xl border border-white/20 p-6 shadow-2xl">
               <h3 className="text-white font-semibold mb-6">Recent Activity</h3>
               
-              <div className="space-y-4">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-center space-x-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
-                    {getActivityIcon(activity.type)}
-                    <div className="flex-1">
-                      <div className="text-white font-medium">{activity.title}</div>
-                      <div className="text-white/70 text-sm">{activity.status}</div>
+              {recentActivity && recentActivity.length > 0 ? (
+                <div className="space-y-4">
+                  {recentActivity.map((activity, index) => (
+                    <div key={index} className="flex items-center space-x-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                      {getActivityIcon(activity.type)}
+                      <div className="flex-1">
+                        <div className="text-white font-medium">{activity.title}</div>
+                        <div className="text-white/70 text-sm">{activity.status}</div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {activity.points && (
+                          <span className="text-yellow-400 text-sm font-medium">+{activity.points} pts</span>
+                        )}
+                        <div className="text-white/50 text-sm">{activity.time}</div>
+                        {activity.difficulty && (
+                          <span className={`text-xs px-2 py-1 rounded-full ${getDifficultyColor(activity.difficulty)} bg-white/10`}>
+                            {activity.difficulty}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {activity.points && (
-                        <span className="text-yellow-400 text-sm font-medium">+{activity.points} pts</span>
-                      )}
-                      <div className="text-white/50 text-sm">{activity.time}</div>
-                      {activity.difficulty && (
-                        <span className={`text-xs px-2 py-1 rounded-full ${getDifficultyColor(activity.difficulty)} bg-white/10`}>
-                          {activity.difficulty}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <MdCode className="w-16 h-16 text-violet-400/50 mx-auto mb-4" />
+                  <p className="text-white/70 text-lg mb-2">No recent activity yet</p>
+                  <p className="text-white/50 text-sm mb-6">
+                    Start solving problems to see your activity here!
+                  </p>
+                  <button
+                    onClick={() => navigate('/code-editor')}
+                    className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-violet-500/25 inline-flex items-center space-x-2"
+                  >
+                    <MdCode className="w-5 h-5" />
+                    <span>Start Coding</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

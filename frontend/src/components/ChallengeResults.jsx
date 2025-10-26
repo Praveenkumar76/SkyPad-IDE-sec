@@ -21,8 +21,8 @@ const ChallengeResults = () => {
   const location = useLocation();
   const [roomData, setRoomData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isWinner, setIsWinner] = useState(false);
   
-  const isWinner = location.state?.isWinner || false;
   const encouragement = ENCOURAGEMENT_PHRASES[Math.floor(Math.random() * ENCOURAGEMENT_PHRASES.length)];
 
   useEffect(() => {
@@ -70,8 +70,25 @@ const ChallengeResults = () => {
 
   const fetchResults = async () => {
     try {
+      const token = localStorage.getItem('token');
+      const currentUserId = token ? JSON.parse(atob(token.split('.')[1])).sub : null;
+      
       const data = await challengeAPI.getRoomDetails(roomId);
       setRoomData(data);
+      
+      // Determine if current user is the winner based on actual room data
+      if (data.winner && currentUserId) {
+        const winnerIsCurrentUser = data.winner._id === currentUserId || data.winner.id === currentUserId;
+        setIsWinner(winnerIsCurrentUser);
+        console.log('Winner determination:', { 
+          currentUserId, 
+          winnerId: data.winner._id || data.winner.id, 
+          isWinner: winnerIsCurrentUser 
+        });
+      } else if (location.state?.isWinner !== undefined) {
+        // Fallback to state if available
+        setIsWinner(location.state.isWinner);
+      }
     } catch (err) {
       console.error('Failed to fetch results:', err);
     } finally {

@@ -47,9 +47,28 @@ const Dashboard = () => {
     };
   });
 
-  // Fetch user profile data on component mount
+  // User stats state
+  const [userStats, setUserStats] = useState({
+    problemsSolved: 0,
+    totalSubmissions: 0,
+    accuracy: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    easyCount: 0,
+    mediumCount: 0,
+    hardCount: 0,
+    contestsParticipated: 0,
+    contestWins: 0,
+    globalRank: null,
+    rating: 0,
+    badges: [],
+    achievements: [],
+    recentActivity: []
+  });
+
+  // Fetch user profile and stats data on component mount
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchUserData = async () => {
       try {
         setIsLoading(true);
         setError(null);
@@ -63,8 +82,15 @@ const Dashboard = () => {
         }
 
         try {
-          const profileData = await userAPI.getProfile();
-          console.log('Profile data received:', profileData); // Debug log
+          // Fetch profile and stats in parallel
+          const [profileData, statsData] = await Promise.all([
+            userAPI.getProfile(),
+            userAPI.getStats()
+          ]);
+          
+          console.log('Profile data received:', profileData);
+          console.log('Stats data received:', statsData);
+          
           setUserData({
             name: profileData.fullName || profileData.username || 'User',
             email: profileData.email || '',
@@ -72,6 +98,7 @@ const Dashboard = () => {
                     profileData.username ? profileData.username.substring(0, 2).toUpperCase() : 'U',
             profilePictureUrl: profileData.profilePictureUrl || null,
           });
+          
           // Update localStorage with fresh data
           if (profileData.fullName) localStorage.setItem('userName', profileData.fullName);
           if (profileData.email) localStorage.setItem('userEmail', profileData.email);
@@ -82,8 +109,28 @@ const Dashboard = () => {
           } else {
             localStorage.removeItem('userProfilePicture');
           }
+          
+          // Update stats
+          setUserStats({
+            problemsSolved: statsData.problemsSolved || 0,
+            totalSubmissions: statsData.totalSubmissions || 0,
+            accuracy: statsData.accuracy || 0,
+            currentStreak: statsData.currentStreak || 0,
+            longestStreak: statsData.longestStreak || 0,
+            easyCount: statsData.difficultyProgress?.easy || 0,
+            mediumCount: statsData.difficultyProgress?.medium || 0,
+            hardCount: statsData.difficultyProgress?.hard || 0,
+            contestsParticipated: statsData.contestsParticipated || 0,
+            contestWins: statsData.contestWins || 0,
+            globalRank: statsData.globalRank || null,
+            rating: statsData.rating || 0,
+            badges: statsData.badges || [],
+            achievements: statsData.achievements || [],
+            recentActivity: statsData.recentActivity || []
+          });
+          
         } catch (apiError) {
-          console.error('API Error fetching profile:', apiError);
+          console.error('API Error fetching data:', apiError);
           
           // If token is invalid or unauthorized, redirect to login
           if (apiError.message.includes('token') || 
@@ -110,7 +157,7 @@ const Dashboard = () => {
       }
     };
 
-    fetchUserProfile();
+    fetchUserData();
   }, [navigate]);
 
   // Close dropdown when clicking outside
@@ -322,18 +369,33 @@ const Dashboard = () => {
             {/* Performance Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <div className="dashboard-card rounded-xl p-6">
-                <h4 className="text-medium-contrast text-sm mb-2">{dashboardData.performanceCards.problemsSolved.label}</h4>
-                <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">{dashboardData.performanceCards.problemsSolved.value}</div>
+                <h4 className="text-medium-contrast text-sm mb-2">Problems Solved</h4>
+                <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
+                  {userStats.problemsSolved}
+                </div>
+                {userStats.problemsSolved === 0 && (
+                  <p className="text-xs text-gray-400 mt-1">Start solving to see progress!</p>
+                )}
               </div>
               
               <div className="dashboard-card rounded-xl p-6">
-                <h4 className="text-medium-contrast text-sm mb-2">{dashboardData.performanceCards.winLossRatio.label}</h4>
-                <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">{dashboardData.performanceCards.winLossRatio.value}</div>
+                <h4 className="text-medium-contrast text-sm mb-2">Accuracy Rate</h4>
+                <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
+                  {userStats.accuracy}%
+                </div>
+                {userStats.accuracy === 0 && (
+                  <p className="text-xs text-gray-400 mt-1">No submissions yet</p>
+                )}
               </div>
               
               <div className="dashboard-card rounded-xl p-6">
-                <h4 className="text-medium-contrast text-sm mb-2">{dashboardData.performanceCards.contestAttendance.label}</h4>
-                <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">{dashboardData.performanceCards.contestAttendance.value}</div>
+                <h4 className="text-medium-contrast text-sm mb-2">Current Streak</h4>
+                <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
+                  {userStats.currentStreak} 🔥
+                </div>
+                {userStats.currentStreak === 0 && (
+                  <p className="text-xs text-gray-400 mt-1">Solve daily to build streaks!</p>
+                )}
               </div>
             </div>
 
@@ -444,52 +506,54 @@ const Dashboard = () => {
                   
                   <div className="grid grid-cols-2 gap-6 mb-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 mb-1">{dashboardData.performanceMetrics.submissions.value}</div>
-                      <div className="text-medium-contrast text-sm mb-1">{dashboardData.performanceMetrics.submissions.label}</div>
-                      <div className="data-positive text-xs">
-                        {dashboardData.performanceMetrics.submissions.period} {dashboardData.performanceMetrics.submissions.growth}
-                      </div>
+                      <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 mb-1">{userStats.totalSubmissions}</div>
+                      <div className="text-medium-contrast text-sm mb-1">Total Submissions</div>
+                      {userStats.totalSubmissions === 0 && (
+                        <div className="text-gray-400 text-xs mt-1">No submissions yet</div>
+                      )}
                     </div>
                     
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 mb-1">{dashboardData.performanceMetrics.accuracy.value}</div>
-                      <div className="text-medium-contrast text-sm mb-1">{dashboardData.performanceMetrics.accuracy.label}</div>
-                      <div className="data-positive text-xs">
-                        {dashboardData.performanceMetrics.accuracy.period} {dashboardData.performanceMetrics.accuracy.growth}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Performance Chart */}
-                  <div className="mb-6">
-                    <div className="h-32 bg-violet-900/20 rounded-lg p-4 flex items-end justify-around">
-                      {dashboardData.performanceMetrics.weeklyData.map((week, idx) => (
-                        <div key={idx} className="text-center">
-                          <div 
-                            className="w-12 bg-gradient-to-t from-violet-500 to-fuchsia-500 rounded mb-2" 
-                            style={{height: `${60 + (idx * 10)}px`}}
-                          ></div>
-                          <div className="text-medium-contrast text-xs">{week}</div>
-                        </div>
-                      ))}
+                      <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 mb-1">{userStats.longestStreak}</div>
+                      <div className="text-medium-contrast text-sm mb-1">Longest Streak</div>
+                      {userStats.longestStreak === 0 && (
+                        <div className="text-gray-400 text-xs mt-1">Keep solving!</div>
+                      )}
                     </div>
                   </div>
 
                   {/* Difficulty Breakdown */}
-                  <div className="grid grid-cols-3 gap-4">
-                    {Object.entries(dashboardData.performanceMetrics.difficultyBreakdown).map(([key, difficulty]) => (
-                      <div key={key} className="text-center">
-                        <div className="w-full bg-gray-700 h-16 rounded relative">
-                          <div 
-                            className="absolute bottom-0 w-full rounded bg-gradient-to-t from-violet-500 to-fuchsia-500"
-                            style={{height: `${difficulty.percentage}%`}}
-                          ></div>
-                        </div>
-                        <div className={`text-sm mt-2 ${getDifficultyColor(difficulty.label)}`}>
-                          {difficulty.label}
-                        </div>
+                  <div className="mb-4">
+                    <h4 className="text-gray-300 text-sm mb-3">Difficulty Breakdown</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-400 mb-1">{userStats.easyCount}</div>
+                        <div className="text-sm text-green-400">Easy</div>
                       </div>
-                    ))}
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-yellow-400 mb-1">{userStats.mediumCount}</div>
+                        <div className="text-sm text-yellow-400">Medium</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-red-400 mb-1">{userStats.hardCount}</div>
+                        <div className="text-sm text-red-400">Hard</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Contest Stats */}
+                  <div className="mt-6 pt-6 border-t border-violet-500/20">
+                    <h4 className="text-gray-300 text-sm mb-3">Contest Performance</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400 mb-1">{userStats.contestsParticipated}</div>
+                        <div className="text-xs text-gray-400">Contests</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400 mb-1">{userStats.rating}</div>
+                        <div className="text-xs text-gray-400">Rating</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

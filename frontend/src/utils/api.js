@@ -116,6 +116,67 @@ export const userAPI = {
       }
       throw error;
     }
+  },
+
+  getStats: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/stats`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      
+      return await parseResponse(response, 'Fetch user stats');
+    } catch (error) {
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('Network error when trying to reach backend:', error);
+        throw new Error(
+          `Cannot connect to backend server. ` +
+          `Please check if the backend is running at ${API_BASE_URL}`
+        );
+      }
+      throw error;
+    }
+  },
+
+  getRecentActivity: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/recent-activity`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      
+      return await parseResponse(response, 'Fetch recent activity');
+    } catch (error) {
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('Network error when trying to reach backend:', error);
+        throw new Error(
+          `Cannot connect to backend server. ` +
+          `Please check if the backend is running at ${API_BASE_URL}`
+        );
+      }
+      throw error;
+    }
+  },
+
+  solveProblem: async (problemData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/solve-problem`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(problemData),
+      });
+      
+      return await parseResponse(response, 'Record problem solve');
+    } catch (error) {
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('Network error when trying to reach backend:', error);
+        throw new Error(
+          `Cannot connect to backend server. ` +
+          `Please check if the backend is running at ${API_BASE_URL}`
+        );
+      }
+      throw error;
+    }
   }
 };
 

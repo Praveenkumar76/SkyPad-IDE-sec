@@ -91,9 +91,9 @@ const CodeEditor = () => {
 
   // WebSocket connection setup
   useEffect(() => {
-    // Connect to the dedicated code editor server (port 3002)
+    // Connect to the dedicated code editor server (port 4000)
     // NOT the main API server (port 5000)
-    const CODE_EDITOR_URL = import.meta.env.VITE_CODE_EDITOR_URL || 'http://localhost:3002';
+    const CODE_EDITOR_URL = import.meta.env.VITE_CODE_EDITOR_URL || 'http://localhost:4000';
     const newSocket = io(CODE_EDITOR_URL);
     
     newSocket.on('connect', () => {

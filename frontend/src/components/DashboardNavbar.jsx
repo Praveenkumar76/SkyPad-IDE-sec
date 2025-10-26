@@ -10,8 +10,7 @@ import {
   MdKeyboardArrowDown,
   MdPerson,
   MdUpload,
-  MdDescription,
-  MdChat
+  MdDescription
 } from 'react-icons/md';
 import { GoGift } from "react-icons/go";
 
@@ -73,7 +72,7 @@ const DashboardNavbar = () => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative z-[9999]">
       <button 
         onClick={() => setIsNavOpen(!isNavOpen)}
         className="flex items-center space-x-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
@@ -98,7 +97,7 @@ const DashboardNavbar = () => {
       
       {/* Profile Dropdown Navigation */}
       {isNavOpen && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 shadow-2xl z-50">
+        <div className="absolute top-full right-0 mt-2 w-64 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 shadow-2xl z-[9999]">
           <div className="space-y-4">
             {/* Dashboard Title */}
             <h1 className="text-xl font-bold text-white mb-4">{userName}</h1>
@@ -120,14 +119,6 @@ const DashboardNavbar = () => {
               >
                 <MdPerson className="w-5 h-5" />
                 <span>Profile</span>
-              </Link>
-
-              <Link 
-                to="/chat" 
-                className={getActiveLinkClass('/chat')}
-              >
-                <MdChat className="w-5 h-5" />
-                <span>Chat</span>
               </Link>
 
               <Link 
@@ -207,7 +198,7 @@ const DashboardNavbar = () => {
       
       {/* Logout Success Popup */}
       {showLogoutPopup && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center">
           <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 shadow-2xl max-w-sm mx-4">
             <div className="text-center">
               <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import BackButton from './BackButton';
 import { initializeSocket, connectSocket, disconnectSocket } from '../utils/socket';
 import { challengeAPI } from '../utils/challengeAPI';
 import './ChallengeLobby.css';
@@ -337,6 +338,9 @@ const ChallengeLobby = () => {
   return (
     <div className="challenge-lobby">
       <div className="lobby-container">
+        <div style={{ marginBottom: '20px' }}>
+          <BackButton to="/challenges/1v1" text="Back to Challenge" />
+        </div>
         {/* Debug Info (remove in production) */}
         <div style={{ 
           background: '#333', 

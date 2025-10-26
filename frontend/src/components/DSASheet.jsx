@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardNavbar from './DashboardNavbar';
+import BackButton from './BackButton';
 import { dsaSheetData } from '../data/dsaSheetData';
 import { 
   MdCheckCircle, 
@@ -50,7 +51,7 @@ const DSASheet = () => {
     };
   }, []);
 
-  const checkAndAddExistingProblems = async () => {
+  const checkAndAddExistingProblems = async (clearFirst = false) => {
     try {
       const response = await fetch('/api/problems', {
         headers: {
@@ -59,7 +60,11 @@ const DSASheet = () => {
       });
       
       if (response.ok) {
-        const problems = await response.json();
+        const data = await response.json();
+        const problems = data.problems || [];
+        
+        // Clear existing DSA problems if requested
+        const dsaProblems = clearFirst ? {} : JSON.parse(localStorage.getItem('dsaProblems') || '{}');
         const tagToTopic = {
           'recursion': 'recursion',
           'linkedlist': 'linkedlist',
@@ -73,8 +78,7 @@ const DSASheet = () => {
           'dp': 'dynamic-programming',
           'greedy': 'greedy'
         };
-
-        const dsaProblems = JSON.parse(localStorage.getItem('dsaProblems') || '{}');
+        
         let updated = false;
 
         problems.forEach(problem => {
@@ -87,8 +91,8 @@ const DSASheet = () => {
                 dsaProblems[matchedTopic] = [];
               }
               
-              // Check if problem already exists
-              const exists = dsaProblems[matchedTopic].some(p => p.id === problem._id);
+              // Check if problem already exists (only if not clearing)
+              const exists = !clearFirst && dsaProblems[matchedTopic].some(p => p.id === problem._id);
               if (!exists) {
                 const dsaProblem = {
                   id: problem._id,
@@ -115,8 +119,9 @@ const DSASheet = () => {
           }
         });
 
-        if (updated) {
+        if (updated || clearFirst) {
           localStorage.setItem('dsaProblems', JSON.stringify(dsaProblems));
+          console.log(clearFirst ? 'DSA sheet cleared and rebuilt' : 'Problems synced to DSA sheet');
         }
       }
     } catch (error) {
@@ -155,8 +160,8 @@ const DSASheet = () => {
   }, [solvedProblems]);
 
   // Add a refresh function that can be called manually
-  const refreshDSASheet = () => {
-    checkAndAddExistingProblems();
+  const refreshDSASheet = (clearFirst = false) => {
+    checkAndAddExistingProblems(clearFirst);
     // Force progress recalculation
     const newProgress = {};
     dsaSheetData.topics.forEach(topic => {
@@ -201,6 +206,9 @@ const DSASheet = () => {
       <div className="relative z-10">
         {/* Header */}
         <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-6">
+          <div className="mb-4">
+            <BackButton to="/dashboard" text="Back to Dashboard" />
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
@@ -210,11 +218,12 @@ const DSASheet = () => {
             </div>
             <div className="flex items-center space-x-4">
               <button
-                onClick={refreshDSASheet}
+                onClick={() => refreshDSASheet(true)}
                 className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                title="Clear and rebuild DSA Sheet from database"
               >
                 <MdRefresh className="w-4 h-4" />
-                <span>Refresh</span>
+                <span>Rebuild</span>
               </button>
               <DashboardNavbar />
             </div>

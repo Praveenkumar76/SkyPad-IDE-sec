@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import BackButton from './BackButton';
 import { challengeAPI } from '../utils/challengeAPI';
 import { getSocket, disconnectSocket } from '../utils/socket';
 import './ChallengeResults.css';
@@ -106,6 +107,9 @@ const ChallengeResults = () => {
   return (
     <div className="challenge-results">
       <div className="results-container">
+        <div style={{ marginBottom: '20px' }}>
+          <BackButton to="/challenges/1v1" text="Back to Challenges" />
+        </div>
         <div className={`results-banner ${isWinner ? 'winner' : 'loser'}`}>
           {isWinner ? (
             <>

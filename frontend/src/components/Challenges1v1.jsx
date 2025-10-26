@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BackButton from './BackButton';
 import { challengeAPI } from '../utils/challengeAPI';
 import { initializeSocket } from '../utils/socket';
 import './Challenges1v1.css';
@@ -127,6 +128,9 @@ const Challenges1v1 = () => {
   return (
     <div className="challenges-1v1-page">
       <div className="challenges-container">
+        <div style={{ marginBottom: '20px' }}>
+          <BackButton to="/challenges" text="Back to Challenges" />
+        </div>
         <div className="challenges-header">
           <h1>1v1 CodeDuel Challenge</h1>
           <p>Compete head-to-head with another coder in real-time!</p>

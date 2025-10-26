@@ -2,10 +2,15 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema(
   {
+    googleId: { 
+      type: String, 
+      unique: true, 
+      sparse: true // Allows null values for non-Google users while maintaining uniqueness
+    },
     email: { type: String, required: true, unique: true, lowercase: true, index: true },
     username: { type: String, required: true },
     fullName: { type: String },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String, required: false }, // Optional for OAuth users
     profilePictureUrl: { type: String },
     lastLoginAt: { type: Date },
     

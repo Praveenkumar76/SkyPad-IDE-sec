@@ -23,6 +23,8 @@ import ContestCreation from './components/ContestCreation';
 import JoinContest from './components/JoinContest';
 import ContestInterface from './components/ContestInterface';
 import ContestLeaderboard from './components/ContestLeaderboard';
+import ProtectedRoute from './components/ProtectedRoute';
+import AuthCallback from './components/AuthCallback';
 import './App.css';
 
 function HeroWithNav() {
@@ -53,10 +55,15 @@ function App() {
         <ScrollToTop />
         <Routes>
           <Route path="/" element={<HeroWithNav />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/chat" element={<Chat />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/chat" element={
+            <ProtectedRoute>
+              <Navigate to="/dashboard" replace />
+            </ProtectedRoute>
+          } />
           <Route path="/problems" element={<Problems />} />
           <Route path="/code-editor" element={<CodeEditor />} />
           <Route path="/profile" element={<Profile />} />

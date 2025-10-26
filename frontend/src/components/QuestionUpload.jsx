@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BackButton from './BackButton';
 import { 
   MdAdd, 
   MdDelete, 
@@ -218,16 +219,28 @@ const QuestionUpload = () => {
         throw new Error('Please log in to upload questions');
       }
 
+      // Transform test case fields to match backend schema
+      const transformedData = {
+        ...formData,
+        sampleTestCases: formData.sampleTestCases.map(tc => ({
+          input: tc.input,
+          expectedOutput: tc.output,
+          explanation: tc.explanation
+        })),
+        hiddenTestCases: formData.hiddenTestCases.map(tc => ({
+          input: tc.input,
+          expectedOutput: tc.output
+        })),
+        tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+      };
+      
       const response = await fetch('/api/problems', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...formData,
-          tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
-        })
+        body: JSON.stringify(transformedData)
       });
 
       if (!response.ok) {
@@ -237,14 +250,17 @@ const QuestionUpload = () => {
 
       const result = await response.json();
       
-      // Add to DSA sheet based on tags
-      addToDSASheet(result);
+      // Add to DSA sheet based on tags - use the problem object from response
+      if (result.problem) {
+        addToDSASheet(result.problem);
+      }
       
-      // Trigger a custom event to refresh DSA sheet
+      // Trigger a custom event to refresh DSA sheet and Problems page
       window.dispatchEvent(new CustomEvent('dsaProblemsUpdated'));
+      window.dispatchEvent(new CustomEvent('problemsUpdated'));
       
-      alert('Question uploaded successfully and added to DSA sheet!');
-      navigate('/dsa-sheet');
+      alert('Question uploaded successfully and synced to DSA sheet!');
+      navigate('/problems');
     } catch (error) {
       console.error('Upload error:', error);
       alert(error.message || 'Failed to upload question');
@@ -264,12 +280,7 @@ const QuestionUpload = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="p-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
-            >
-              <MdArrowBack className="w-6 h-6 text-white" />
-            </button>
+            <BackButton to="/dashboard" text="Back to Dashboard" className="text-lg" />
             <div>
               <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
                 Upload Question

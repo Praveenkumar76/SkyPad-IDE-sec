@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardNavbar from './DashboardNavbar';
+import BackButton from './BackButton';
 import { rewardsAPI } from '../utils/api';
 import { 
   MdEmojiEvents, 
@@ -270,6 +271,9 @@ const Rewards = () => {
       <div className="relative z-10">
         {/* Header */}
         <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-6">
+          <div className="mb-4">
+            <BackButton to="/dashboard" text="Back to Dashboard" />
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">

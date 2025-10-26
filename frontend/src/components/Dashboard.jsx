@@ -55,38 +55,56 @@ const Dashboard = () => {
         setError(null);
         
         const token = localStorage.getItem('token');
-        if (token) {
+        if (!token) {
+          // No token, redirect to login
+          console.log('No token found, redirecting to login');
+          navigate('/login');
+          return;
+        }
+
+        try {
           const profileData = await userAPI.getProfile();
           console.log('Profile data received:', profileData); // Debug log
           setUserData({
-            name: profileData.fullName || 'User',
+            name: profileData.fullName || profileData.username || 'User',
             email: profileData.email || '',
-            avatar: profileData.fullName ? profileData.fullName.substring(0, 2).toUpperCase() : 'U',
+            avatar: profileData.fullName ? profileData.fullName.substring(0, 2).toUpperCase() : 
+                    profileData.username ? profileData.username.substring(0, 2).toUpperCase() : 'U',
             profilePictureUrl: profileData.profilePictureUrl || null,
           });
           // Update localStorage with fresh data
           if (profileData.fullName) localStorage.setItem('userName', profileData.fullName);
           if (profileData.email) localStorage.setItem('userEmail', profileData.email);
-          if (profileData.fullName) localStorage.setItem('userAvatar', profileData.fullName.substring(0, 2).toUpperCase());
+          const avatarText = profileData.fullName || profileData.username || 'U';
+          localStorage.setItem('userAvatar', avatarText.substring(0, 2).toUpperCase());
           if (profileData.profilePictureUrl) {
             localStorage.setItem('userProfilePicture', profileData.profilePictureUrl);
           } else {
             localStorage.removeItem('userProfilePicture');
           }
-        } else {
-          // No token, redirect to login
-          navigate('/login');
-          return;
+        } catch (apiError) {
+          console.error('API Error fetching profile:', apiError);
+          
+          // If token is invalid or unauthorized, redirect to login
+          if (apiError.message.includes('token') || 
+              apiError.message.includes('unauthorized') || 
+              apiError.message.includes('401')) {
+            console.log('Token invalid, clearing storage and redirecting to login');
+            localStorage.clear();
+            navigate('/login');
+            return;
+          }
+          
+          // If it's a network error, show error but don't redirect
+          // Use cached data from localStorage
+          console.warn('Using cached user data due to API error');
+          setError('Could not connect to server. Using cached data.');
+          // Keep the userData from initial state (localStorage)
         }
       } catch (error) {
-        console.error('Failed to fetch user profile:', error);
-        setError('Failed to load profile data');
-        // If token is invalid, redirect to login
-        if (error.message.includes('token') || error.message.includes('unauthorized')) {
-          localStorage.clear();
-          navigate('/login');
-          return;
-        }
+        console.error('Unexpected error in Dashboard:', error);
+        setError('An unexpected error occurred');
+        // Don't redirect on unexpected errors, just show error message
       } finally {
         setIsLoading(false);
       }
@@ -144,23 +162,9 @@ const Dashboard = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-violet-900/30 to-black flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-violet-900/30 to-black flex items-center justify-center">
-        <div className="text-red-400 text-xl">
-          {error}
-          <button 
-            onClick={() => window.location.reload()} 
-            className="ml-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-          >
-            Retry
-          </button>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-400 mx-auto mb-4"></div>
+          <div className="text-white text-xl">Loading Dashboard...</div>
         </div>
       </div>
     );
@@ -177,6 +181,25 @@ const Dashboard = () => {
         <div className="relative z-10">
           {/* Main Content Area */}
           <div className="p-6">
+            {/* Error Banner (if any) */}
+            {error && (
+              <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4 mb-6 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <span className="text-yellow-400 text-2xl">⚠️</span>
+                  <div>
+                    <p className="text-yellow-300 font-semibold">Warning</p>
+                    <p className="text-yellow-200 text-sm">{error}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-600 transition-colors font-medium"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
             {/* Top Header with Logo */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center space-x-3">

@@ -224,7 +224,7 @@ const ContestInterface = () => {
         <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <BackButton to="/challenges" text="Exit Contest" />
+              <BackButton to="/contests" text="Exit Contest" />
               <div>
                 <h1 className="text-2xl font-bold text-white">{contest?.title}</h1>
                 <p className="text-gray-300 text-sm">Contest ID: {contestId}</p>

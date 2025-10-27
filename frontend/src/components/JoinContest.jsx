@@ -108,7 +108,7 @@ const JoinContest = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <BackButton to="/challenges" text="Back to Challenges" />
+            <BackButton to="/contests" text="Back to Contests" />
             <div>
               <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
                 Join Contest

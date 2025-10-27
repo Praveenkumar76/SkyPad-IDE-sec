@@ -19,6 +19,7 @@ import Challenges1v1 from './components/Challenges1v1';
 import ChallengeLobby from './components/ChallengeLobby';
 import CodeDuelIDE from './components/CodeDuelIDE';
 import ChallengeResults from './components/ChallengeResults';
+import Contests from './components/Contests';
 import ContestCreation from './components/ContestCreation';
 import JoinContest from './components/JoinContest';
 import ContestInterface from './components/ContestInterface';

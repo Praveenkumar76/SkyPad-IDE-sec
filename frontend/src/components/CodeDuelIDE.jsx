@@ -51,6 +51,10 @@ const CodeDuelIDE = () => {
       const socketInstance = getSocket();
       setSocket(socketInstance);
 
+      // Join the room via socket to receive real-time updates
+      socketInstance.emit('join-room', { roomId: roomId.toUpperCase() });
+      console.log('Joining socket room:', roomId);
+
       // Socket event listeners
       socketInstance.on('opponent-submitted', (data) => {
         setOpponentSubmitted(true);
@@ -58,12 +62,15 @@ const CodeDuelIDE = () => {
       });
 
       socketInstance.on('match-finished', (data) => {
+        console.log('Match finished event received:', data);
         setMatchFinished(true);
         setMatchStatus('finished');
         setIsSubmitting(false); // Stop any ongoing submission
         
         const currentUserId = JSON.parse(atob(token.split('.')[1])).sub;
-        const isWinner = data.winnerId === currentUserId;
+        const isWinner = data.winnerId && (data.winnerId === currentUserId || data.winnerId.toString() === currentUserId);
+        
+        console.log('Winner check:', { currentUserId, winnerId: data.winnerId, isWinner });
         
         // Show match finished message
         setOutput(prev => prev + `\n\n🏁 Match has ended!\n${isWinner ? '🎉 You won!' : '😔 You lost.'} Redirecting to results...`);
@@ -77,7 +84,7 @@ const CodeDuelIDE = () => {
               matchDuration: data.matchDuration
             }
           });
-        }, 3000);
+        }, 2000); // Reduced to 2 seconds for faster redirect
       });
 
       socketInstance.on('error', (data) => {
@@ -110,11 +117,12 @@ const CodeDuelIDE = () => {
     // Keep socket connected until match is finished
     return () => {
       clearInterval(timerInterval);
-      if (socket) {
-        socket.off('opponent-submitted');
-        socket.off('match-finished');
-        socket.off('error');
-        // Don't disconnect socket here - it should stay connected until results page
+      if (socketInstance) {
+        socketInstance.off('opponent-submitted');
+        socketInstance.off('match-finished');
+        socketInstance.off('error');
+        socketInstance.emit('leave-room');
+        console.log('Left socket room on unmount');
       }
     };
   }, [roomId, navigate]);
@@ -129,6 +137,20 @@ const CodeDuelIDE = () => {
         setMatchStatus(data.status);
         if (data.status === 'finished' || data.status === 'expired') {
           setMatchFinished(true);
+          
+          // If match is already finished, redirect to results immediately
+          const token = localStorage.getItem('token');
+          const currentUserId = token ? JSON.parse(atob(token.split('.')[1])).sub : null;
+          const isWinner = data.winner && currentUserId && 
+            (data.winner._id === currentUserId || data.winner.id === currentUserId);
+          
+          console.log('Match already finished, redirecting to results');
+          setTimeout(() => {
+            navigate(`/challenge/${roomId}/results`, {
+              state: { isWinner }
+            });
+          }, 1000);
+          return;
         }
       }
       

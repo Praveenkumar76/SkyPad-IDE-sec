@@ -192,11 +192,16 @@ const SignUp = () => {
             </div>
 
             <div className="flex justify-center space-x-4 mb-6">
-              {/* Google */}
+              {/* Google OAuth - Full redirect flow */}
               <button
                 type="button"
-                onClick={() => console.log('Google signup clicked')}
+                onClick={() => {
+                  // Redirect to backend OAuth endpoint
+                  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                  window.location.href = `${backendUrl}/api/auth/google/oauth`;
+                }}
                 className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center hover:bg-white/30 transition-all duration-300 hover:scale-110"
+                title="Sign up with Google"
               >
                 <svg className="w-6 h-6" viewBox="0 0 24 24">
                   <path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

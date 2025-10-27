@@ -23,6 +23,7 @@ import ContestCreation from './components/ContestCreation';
 import JoinContest from './components/JoinContest';
 import ContestInterface from './components/ContestInterface';
 import ContestLeaderboard from './components/ContestLeaderboard';
+import Contests from './components/Contests';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthCallback from './components/AuthCallback';
 import './App.css';
@@ -71,6 +72,7 @@ function App() {
           <Route path="/solve/:id" element={<ProblemSolver />} />
           <Route path="/dsa-sheet" element={<DSASheet />} />
           <Route path="/challenges" element={<Challenges />} />
+          <Route path="/contests" element={<Contests />} />
           <Route path="/create-contest" element={<ContestCreation />} />
           <Route path="/join-contest" element={<JoinContest />} />
           <Route path="/contest/:contestId" element={<ContestInterface />} />

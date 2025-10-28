@@ -1,16 +1,20 @@
-const express = require('express');
-const Contest = require('../models/Contest');
-const ContestRegistration = require('../models/ContestRegistration');
-const ContestSubmission = require('../models/ContestSubmission');
-const Problem = require('../models/Problem');
-const { authenticateToken } = require('../middleware/auth');
-const { broadcastLeaderboardUpdate } = require('../socketServer');
+import {express} from "express";
+import {contest} from "../models/Contest";
+import {ContestRegistration} from "../models/ContestRegistration";
+import {ContestSubmission} from "../models/ContestSubmission";
+import {Problem} from "../models/Problem";
+import {authenticateToken} from "../middleware/auth";
+import {broadcastLeaderboardUpdate} from "../socketServer";
+import {mongoose} from "mongoose";
+import {spawn} from "child_process";
+import {fs} from "fs";
+import {os} from "os";
+import {path} from "path";
 
 const router = express.Router();
 
 // Check database connection
 const checkDB = (res) => {
-  const mongoose = require('mongoose');
   if (mongoose.connection.readyState !== 1) {
     res.status(503).json({ message: 'Database not available. Please try again later.' });
     return false;
@@ -41,8 +45,8 @@ router.post('/create', authenticateToken, async (req, res) => {
       title: title || 'MISSING',
       description: description || 'MISSING',
       password: password ? 'PROVIDED' : 'MISSING',
-      timeSlots: timeSlots ? `${timeSlots.length} slots, selected: ${timeSlots.filter(s => s.isSelected).length}` : 'MISSING',
-      questions: questions ? `${questions.length} questions` : 'MISSING'
+      timeSlots: timeSlots ? ${timeSlots.length} slots, selected: ${timeSlots.filter(s => s.isSelected).length} : 'MISSING',
+      questions: questions ? ${questions.length} questions : 'MISSING'
     });
 
     if (!title || !description || !password) {
@@ -109,7 +113,7 @@ router.post('/create', authenticateToken, async (req, res) => {
       return res.status(500).json({ message: 'Failed to generate unique contest ID' });
     }
 
-    const shareableLink = `/contest/${contestId}`;
+    const shareableLink = /contest/${contestId};
 
     // Process questions and generate unique IDs
     const processedQuestions = questions.map((question, index) => ({
@@ -226,9 +230,9 @@ router.get('/:contestId/share', async (req, res) => {
       creator: contest.creatorId?.username || 'Unknown',
       questionsCount: contest.questions.length,
       maxParticipants: contest.maxParticipants,
-      shareableLink: `${req.protocol}://${req.get('host')}/join-contest?id=${contest.contestId}`,
+      shareableLink: ${req.protocol}://${req.get('host')}/join-contest?id=${contest.contestId},
       joinInstructions: {
-        step1: `Contest ID: ${contest.contestId}`,
+        step1: Contest ID: ${contest.contestId},
         step2: 'Use the contest password provided by the organizer',
         step3: 'Go to /join-contest and enter the credentials'
       },
@@ -702,12 +706,9 @@ router.get('/:contestId/problems/:problemId', async (req, res) => {
 
 // Helper function for code execution (mock)
 async function executeCode(code, language, testCases) {
-  console.log(`Executing ${language} code against ${testCases.length} test cases`);
+  console.log(Executing ${language} code against ${testCases.length} test cases);
   
-  const { spawn } = require('child_process');
-  const fs = require('fs');
-  const os = require('os');
-  const path = require('path');
+  
 
   function trimOutput(s) {
     return String(s ?? '')
@@ -803,4 +804,3 @@ async function executeCode(code, language, testCases) {
 }
 
 module.exports = router;
-

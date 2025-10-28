@@ -1,10 +1,11 @@
-const express = require('express');
-const { spawnSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const Problem = require('../models/Problem');
-const { authenticateToken } = require('../middleware/auth');
+import {express} from "express";
+import {spawnSync} from "child_process";
+import {fs} from "fs";
+import {path} from "path";
+import {crypto} from "crypto";
+import {problem} from "../models/Problem";
+import { authenticateToken } from "../middleware/auth";
+import {mongoose} from "mongoose";
 
 const router = express.Router();
 
@@ -18,7 +19,6 @@ if (!fs.existsSync(TEMP_DIR)) {
 router.get('/', async (req, res) => {
   try {
     // Check if database is connected
-    const mongoose = require('mongoose');
     if (mongoose.connection.readyState !== 1) {
       // Return empty array when DB is not connected
       return res.json({
@@ -296,16 +296,16 @@ const executeCompiled = (language, code, input, timeLimit) => {
       executeCmd = 'java';
       executeArgs = ['-cp', TEMP_DIR, 'Main'];
     } else if (language === 'c') {
-      sourceFile = path.join(TEMP_DIR, `${uuid}.c`);
-      const outputFile = path.join(TEMP_DIR, `${uuid}.out`);
+      sourceFile = path.join(TEMP_DIR, ${uuid}.c);
+      const outputFile = path.join(TEMP_DIR, ${uuid}.out);
       filesToClean.push(sourceFile, outputFile);
       compileCmd = 'gcc';
       compileArgs = [sourceFile, '-o', outputFile];
       executeCmd = outputFile;
       executeArgs = [];
     } else if (language === 'cpp' || language === 'c++') {
-      sourceFile = path.join(TEMP_DIR, `${uuid}.cpp`);
-      const outputFile = path.join(TEMP_DIR, `${uuid}.out`);
+      sourceFile = path.join(TEMP_DIR, ${uuid}.cpp);
+      const outputFile = path.join(TEMP_DIR, ${uuid}.out);
       filesToClean.push(sourceFile, outputFile);
       compileCmd = 'g++';
       compileArgs = [sourceFile, '-o', outputFile];
@@ -359,7 +359,7 @@ const executeCompiled = (language, code, input, timeLimit) => {
           fs.unlinkSync(file);
         }
       } catch (err) {
-        console.error(`Failed to delete ${file}:`, err.message);
+        console.error(Failed to delete ${file}:, err.message);
       }
     });
   }
@@ -374,7 +374,7 @@ const executeCode = (language, code, input, timeLimit) => {
   if (!supportedLanguages.includes(normalizedLang)) {
     return { 
       error: 'Runtime Error', 
-      stderr: `Unsupported language: ${language}`,
+      stderr: Unsupported language: ${language},
       stdout: '' 
     };
   }
@@ -422,7 +422,7 @@ router.post('/run', authenticateToken, async (req, res) => {
         return {
           input,
           expectedOutput,
-          actualOutput: `${result.error}${result.stderr ? ': ' + result.stderr : ''}`,
+          actualOutput: ${result.error}${result.stderr ? ': ' + result.stderr : ''},
           passed: false,
           executionTime
         };

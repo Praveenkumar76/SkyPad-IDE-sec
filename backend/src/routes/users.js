@@ -208,7 +208,7 @@ router.post('/solve-problem', authenticateToken, async (req, res) => {
       user.rewards.transactionHistory.push({
         type: 'reward',
         amount: 100,
-        description: Level up to ${newLevel}!,
+        description: `Level up to ${newLevel}!`,
         source: 'levelup'
       });
     }
@@ -217,7 +217,7 @@ router.post('/solve-problem', authenticateToken, async (req, res) => {
     user.rewards.transactionHistory.push({
       type: 'earned',
       amount: finalCoinReward,
-      description: Solved problem: ${title},
+      description: `Solved problem: ${title}`,
       source: 'problem'
     });
 
@@ -404,7 +404,7 @@ async function getRecentActivity(user) {
     .map(contest => ({
       type: 'contest',
       title: contest.contestName,
-      status: contest.isWon ? 'Won' : Ranked ${contest.rank},
+      status: `contest.isWon ? 'Won' : Ranked ${contest.rank}`,
       time: formatLastActive(contest.participatedAt),
       points: contest.points
     }));
@@ -415,7 +415,7 @@ async function getRecentActivity(user) {
     recentActivity.push({
       type: 'streak',
       title: 'Daily Streak',
-      status: Day ${currentStreak},
+      status: `Day ${currentStreak}`,
       time: 'Today',
       points: currentStreak * 5
     });
@@ -543,8 +543,8 @@ function formatLastActive(lastActive) {
   const diffDays = Math.floor(diffHours / 24);
   
   if (diffHours < 1) return 'Just now';
-  if (diffHours < 24) return ${diffHours} hour${diffHours > 1 ? 's' : ''} ago;
-  if (diffDays < 7) return ${diffDays} day${diffDays > 1 ? 's' : ''} ago;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
   return 'Over a week ago';
 }
 
@@ -687,7 +687,7 @@ async function checkAndAwardBadges(user) {
       user.rewards.transactionHistory.push({
         type: 'reward',
         amount: badgeReward,
-        description: Earned badge: ${badgeDef.name},
+        description: `Earned badge: ${badgeDef.name}`,
         source: 'badge'
       });
     }
@@ -728,7 +728,7 @@ async function checkAndUpdateAchievements(user) {
         user.rewards.transactionHistory.push({
           type: 'reward',
           amount: existingAchievement.reward.coins,
-          description: Achievement: ${existingAchievement.name},
+          description: `Achievement: ${existingAchievement.name}`,
           source: 'achievement'
         });
       }

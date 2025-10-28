@@ -296,16 +296,16 @@ const executeCompiled = (language, code, input, timeLimit) => {
       executeCmd = 'java';
       executeArgs = ['-cp', TEMP_DIR, 'Main'];
     } else if (language === 'c') {
-      sourceFile = path.join(TEMP_DIR, ${uuid}.c);
-      const outputFile = path.join(TEMP_DIR, ${uuid}.out);
+      sourceFile = path.join(TEMP_DIR, `${uuid}.c`);
+      const outputFile = path.join(TEMP_DIR, `${uuid}.out`);
       filesToClean.push(sourceFile, outputFile);
       compileCmd = 'gcc';
       compileArgs = [sourceFile, '-o', outputFile];
       executeCmd = outputFile;
       executeArgs = [];
     } else if (language === 'cpp' || language === 'c++') {
-      sourceFile = path.join(TEMP_DIR, ${uuid}.cpp);
-      const outputFile = path.join(TEMP_DIR, ${uuid}.out);
+      sourceFile = path.join(TEMP_DIR, `${uuid}.cpp`);
+      const outputFile = path.join(TEMP_DIR, `${uuid}.out`);
       filesToClean.push(sourceFile, outputFile);
       compileCmd = 'g++';
       compileArgs = [sourceFile, '-o', outputFile];
@@ -359,7 +359,7 @@ const executeCompiled = (language, code, input, timeLimit) => {
           fs.unlinkSync(file);
         }
       } catch (err) {
-        console.error(Failed to delete ${file}:, err.message);
+        console.error(`Failed to delete ${file}:`, err.message);
       }
     });
   }
@@ -374,7 +374,7 @@ const executeCode = (language, code, input, timeLimit) => {
   if (!supportedLanguages.includes(normalizedLang)) {
     return { 
       error: 'Runtime Error', 
-      stderr: Unsupported language: ${language},
+      stderr: `Unsupported language: ${language}`,
       stdout: '' 
     };
   }
@@ -422,7 +422,7 @@ router.post('/run', authenticateToken, async (req, res) => {
         return {
           input,
           expectedOutput,
-          actualOutput: ${result.error}${result.stderr ? ': ' + result.stderr : ''},
+          actualOutput: `${result.error}${result.stderr ? ': ' + result.stderr : ''}`,
           passed: false,
           executionTime
         };

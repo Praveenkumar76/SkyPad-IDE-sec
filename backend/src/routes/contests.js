@@ -45,8 +45,8 @@ router.post('/create', authenticateToken, async (req, res) => {
       title: title || 'MISSING',
       description: description || 'MISSING',
       password: password ? 'PROVIDED' : 'MISSING',
-      timeSlots: timeSlots ? ${timeSlots.length} slots, selected: ${timeSlots.filter(s => s.isSelected).length} : 'MISSING',
-      questions: questions ? ${questions.length} questions : 'MISSING'
+      timeSlots: timeSlots ? `${timeSlots.length} slots, selected: ${timeSlots.filter(s => s.isSelected).length}` : 'MISSING',
+      questions: questions ? `${questions.length} questions` : 'MISSING'
     });
 
     if (!title || !description || !password) {
@@ -113,7 +113,7 @@ router.post('/create', authenticateToken, async (req, res) => {
       return res.status(500).json({ message: 'Failed to generate unique contest ID' });
     }
 
-    const shareableLink = /contest/${contestId};
+    const shareableLink = `/contest/${contestId}`;
 
     // Process questions and generate unique IDs
     const processedQuestions = questions.map((question, index) => ({
@@ -230,9 +230,9 @@ router.get('/:contestId/share', async (req, res) => {
       creator: contest.creatorId?.username || 'Unknown',
       questionsCount: contest.questions.length,
       maxParticipants: contest.maxParticipants,
-      shareableLink: ${req.protocol}://${req.get('host')}/join-contest?id=${contest.contestId},
+      shareableLink: `${req.protocol}://${req.get('host')}/join-contest?id=${contest.contestId}`,
       joinInstructions: {
-        step1: Contest ID: ${contest.contestId},
+        step1: `Contest ID: ${contest.contestId}`,
         step2: 'Use the contest password provided by the organizer',
         step3: 'Go to /join-contest and enter the credentials'
       },
@@ -706,7 +706,7 @@ router.get('/:contestId/problems/:problemId', async (req, res) => {
 
 // Helper function for code execution (mock)
 async function executeCode(code, language, testCases) {
-  console.log(Executing ${language} code against ${testCases.length} test cases);
+  console.log(`Executing ${language} code against ${testCases.length} test cases`);
   
   
 

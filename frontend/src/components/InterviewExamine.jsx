@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useParams, useNavigate } from 'react-router-dom';
+import Editor from '@monaco-editor/react';
 import DashboardNavbar from './DashboardNavbar';
 import BackButton from './BackButton';
 import { 
@@ -30,6 +31,7 @@ const InterviewExamine = () => {
   const [shareLink, setShareLink] = useState('');
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
+  const editorRef = useRef(null);
 
   // Configure socket URL (Render/production) with fallback to local
   const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
@@ -327,26 +329,26 @@ const InterviewExamine = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-violet-900/20 to-black relative overflow-hidden pt-20">
+    <div className="h-screen bg-gradient-to-br from-black via-violet-900/20 to-black relative overflow-hidden flex flex-col">
       {/* Background watermark */}
       <div className="absolute inset-0 flex items-center justify-center opacity-5 select-none pointer-events-none">
         <span className="text-9xl font-bold text-violet-400">SKYPAD</span>
       </div>
       
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
-        <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-6">
+        <div className="bg-black/20 backdrop-blur-md border-b border-white/10 p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-4">
               <BackButton to="/dashboard" text="Back to Dashboard" />
               <div>
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
+                <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400">
                   Interview-Examine
                 </h1>
-                <p className="text-gray-300 mt-2">Collaborative coding session</p>
+                <p className="text-gray-300 text-sm">Collaborative coding session</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               {/* Shareable Link Control - Always Visible */}
               <div className="flex items-center bg-white/10 border border-white/20 rounded-lg overflow-hidden">
                 <input
@@ -366,26 +368,26 @@ const InterviewExamine = () => {
               </div>
               <button
                 onClick={copyShareLink}
-                className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
+                className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white px-3 py-2 rounded-lg flex items-center space-x-2 transition-all duration-300 hover:scale-105"
               >
                 <MdShare className="w-4 h-4" />
-                <span className="hidden sm:inline">Share Session</span>
-                <span className="sm:hidden">Share</span>
+                <span className="hidden sm:inline">Share</span>
               </button>
               <DashboardNavbar />
             </div>
           </div>
         </div>
 
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
+        {/* Main Content */}
+        <div className="flex-1 overflow-hidden p-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full">
             {/* Code Editor */}
-            <div className="lg:col-span-3 space-y-4">
+            <div className="lg:col-span-3 flex flex-col gap-3 overflow-y-auto">
               {/* Editor Header */}
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-white">Code Editor</h3>
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-3">
                     <select
                       value={selectedLanguage}
                       onChange={(e) => setSelectedLanguage(e.target.value)}
@@ -400,7 +402,7 @@ const InterviewExamine = () => {
                     <button
                       onClick={runCode}
                       disabled={isRunning || !code.trim()}
-                      className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-300 ${
+                      className={`px-3 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-300 text-sm ${
                         isRunning || !code.trim()
                           ? 'bg-white/30 cursor-not-allowed'
                           : 'bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 hover:scale-105'
@@ -414,13 +416,13 @@ const InterviewExamine = () => {
               </div>
 
               {/* Collaboration Info */}
-              <div className="bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 backdrop-blur-md rounded-xl p-4 border border-violet-400/30">
+              <div className="bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 backdrop-blur-md rounded-xl p-3 border border-violet-400/30 flex-shrink-0">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
                     <MdShare className="w-5 h-5 text-violet-300" />
                     <div>
-                      <h4 className="text-white font-semibold">Invite Others to Collaborate</h4>
-                      <p className="text-gray-300 text-sm">Share this link so others can join and code together</p>
+                      <h4 className="text-white font-semibold text-sm">Invite Others to Collaborate</h4>
+                      <p className="text-gray-300 text-xs">Share this link so others can join and code together</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -428,11 +430,11 @@ const InterviewExamine = () => {
                       type="text"
                       readOnly
                       value={shareLink}
-                      className="px-3 py-2 bg-black/20 border border-white/20 rounded text-white text-sm w-64 outline-none"
+                      className="px-3 py-2 bg-black/20 border border-white/20 rounded text-white text-sm w-48 outline-none"
                     />
                     <button
                       onClick={copyShareLink}
-                      className="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                      className="bg-violet-500 hover:bg-violet-600 text-white px-3 py-2 rounded-lg flex items-center space-x-2 transition-colors text-sm"
                     >
                       <MdCopyAll className="w-4 h-4" />
                       <span>Copy</span>
@@ -441,41 +443,73 @@ const InterviewExamine = () => {
                 </div>
               </div>
 
-              {/* Code Textarea */}
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 flex-1">
-                <textarea
+              {/* Monaco Code Editor */}
+              <div className="bg-white/10 backdrop-blur-md rounded-xl overflow-hidden border border-white/20 flex-shrink-0" style={{ height: '400px' }}>
+                <Editor
+                  height="100%"
+                  language={selectedLanguage.toLowerCase() === 'c++' ? 'cpp' : selectedLanguage.toLowerCase()}
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="Write your code here..."
-                  className="w-full h-64 bg-black/20 border border-white/20 rounded-lg p-4 text-white font-mono text-sm resize-none focus:outline-none focus:border-violet-400"
+                  onChange={(value) => setCode(value || '')}
+                  onMount={(editor) => {
+                    editorRef.current = editor;
+                  }}
+                  theme="vs-dark"
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    roundedSelection: true,
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: 2,
+                    wordWrap: 'on',
+                    autoClosingBrackets: 'always',
+                    autoClosingQuotes: 'always',
+                    autoClosingOvertype: 'always',
+                    autoSurround: 'languageDefined',
+                    formatOnPaste: true,
+                    formatOnType: true,
+                    suggestOnTriggerCharacters: true,
+                    acceptSuggestionOnEnter: 'on',
+                    quickSuggestions: true,
+                    parameterHints: { enabled: true },
+                    folding: true,
+                    bracketPairColorization: { enabled: true },
+                    renderLineHighlight: 'all',
+                    cursorBlinking: 'smooth',
+                    smoothScrolling: true,
+                    matchBrackets: 'always',
+                    occurrencesHighlight: true,
+                    selectionHighlight: true,
+                  }}
                 />
               </div>
 
               {/* Output */}
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                <h4 className="text-white font-medium mb-2">Output</h4>
-                <pre className="text-gray-300 text-sm whitespace-pre-wrap bg-black/20 p-3 rounded border border-white/10 min-h-[100px]">
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 flex-shrink-0">
+                <h4 className="text-white font-medium mb-2 text-sm">Output</h4>
+                <pre className="text-gray-300 text-sm whitespace-pre-wrap bg-black/20 p-3 rounded border border-white/10 h-24 overflow-y-auto">
                   {output || 'No output yet...'}
                 </pre>
               </div>
             </div>
 
             {/* Sidebar */}
-            <div className="lg:col-span-1 space-y-4">
+            <div className="lg:col-span-1 flex flex-col gap-3 overflow-y-auto">
               {/* Participants */}
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 flex-shrink-0">
+                <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
                   <MdPerson className="w-5 h-5 mr-2" />
                   Participants ({participants.length})
                 </h3>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
                   {participants.map((participant, index) => (
-                    <div key={participant.id} className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-sm">
+                    <div key={participant.id} className="flex items-center space-x-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                         {index + 1}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-white font-medium truncate">{participant.name}</div>
+                        <div className="text-white font-medium truncate text-sm">{participant.name}</div>
                         <div className="text-gray-400 text-xs truncate">{participant.email}</div>
                       </div>
                     </div>
@@ -483,47 +517,94 @@ const InterviewExamine = () => {
                 </div>
               </div>
 
-              {/* Chat */}
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 flex-1 min-h-0">
-                <h3 className="text-lg font-semibold text-white mb-4">Chat</h3>
-                <div className="h-48 overflow-y-auto space-y-2 mb-4">
+              {/* Modern Chat */}
+              <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md rounded-xl border border-white/20 flex-1 flex flex-col min-h-0 shadow-xl">
+                {/* Chat Header */}
+                <div className="bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 border-b border-white/20 p-4 rounded-t-xl">
+                  <h3 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 flex items-center">
+                    <MdSend className="w-5 h-5 mr-2 text-violet-300" />
+                    Live Chat
+                  </h3>
+                  <p className="text-gray-300 text-xs mt-1">Collaborate in real-time</p>
+                </div>
+
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0 scrollbar-thin scrollbar-thumb-violet-500/50 scrollbar-track-transparent">
                   {messages.length === 0 ? (
-                    <div className="text-gray-400 text-sm text-center py-4">
-                      No messages yet. Start the conversation!
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mb-3">
+                        <MdSend className="w-8 h-8 text-violet-300" />
+                      </div>
+                      <p className="text-gray-400 text-sm font-medium">No messages yet</p>
+                      <p className="text-gray-500 text-xs mt-1">Start the conversation!</p>
                     </div>
                   ) : (
-                    messages.map((message) => (
-                      <div key={message.id} className="bg-white/5 rounded-lg p-3">
-                        <div className="flex justify-between items-start mb-1">
-                          <span className="text-violet-300 font-medium text-sm">{message.sender}</span>
-                          <span className="text-gray-400 text-xs">{formatTime(message.timestamp)}</span>
+                    messages.map((message, index) => {
+                      const isCurrentUser = message.sender === (localStorage.getItem('userName') || 'Anonymous');
+                      return (
+                        <div
+                          key={message.id}
+                          className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                        >
+                          <div
+                            className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
+                              isCurrentUser
+                                ? 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white rounded-br-sm'
+                                : 'bg-white/10 backdrop-blur-sm text-white border border-white/20 rounded-bl-sm'
+                            } shadow-lg`}
+                          >
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span
+                                className={`text-xs font-semibold ${
+                                  isCurrentUser ? 'text-white/90' : 'text-violet-300'
+                                }`}
+                              >
+                                {message.sender}
+                              </span>
+                              <span
+                                className={`text-xs ${
+                                  isCurrentUser ? 'text-white/70' : 'text-gray-400'
+                                }`}
+                              >
+                                {formatTime(message.timestamp)}
+                              </span>
+                            </div>
+                            <p className="text-sm leading-relaxed break-words">{message.content}</p>
+                          </div>
                         </div>
-                        <p className="text-white text-sm break-words">{message.content}</p>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                   <div ref={messagesEndRef} />
                 </div>
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder="Type a message..."
-                    className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 text-sm focus:outline-none focus:border-violet-400"
-                  />
-                  <button
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim()}
-                    className={`px-3 py-2 rounded-lg transition-colors ${
-                      newMessage.trim() 
-                        ? 'bg-violet-500 hover:bg-violet-600 text-white' 
-                        : 'bg-gray-500 text-gray-300 cursor-not-allowed'
-                    }`}
-                  >
-                    <MdSend className="w-4 h-4" />
-                  </button>
+
+                {/* Message Input Area */}
+                <div className="p-4 border-t border-white/20 bg-black/20 rounded-b-xl">
+                  <div className="flex space-x-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                        placeholder="Type your message..."
+                        className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-400 text-sm focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-400/30 transition-all"
+                      />
+                    </div>
+                    <button
+                      onClick={sendMessage}
+                      disabled={!newMessage.trim()}
+                      className={`px-4 py-3 rounded-xl font-medium flex items-center justify-center transition-all duration-300 min-w-[50px] ${
+                        newMessage.trim()
+                          ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white shadow-lg hover:shadow-violet-500/50 hover:scale-105 active:scale-95'
+                          : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+                      }`}
+                      title="Send message"
+                    >
+                      <MdSend className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-2 text-center">Press Enter to send</p>
                 </div>
               </div>
             </div>

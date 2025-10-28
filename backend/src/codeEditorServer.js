@@ -1,10 +1,11 @@
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const { exec, spawn } = require('child_process');
-const fs = require('fs').promises;
-const path = require('path');
+import {express} from "express";
+import {http} from "http";
+import {server} from "socket.io";
+import {cors} from "cors";
+import { exec, spawn } from "child_process";
+import {fs} from ("fs").promises;
+import {path} from "path";
 
 const app = express();
 const server = http.createServer(app);

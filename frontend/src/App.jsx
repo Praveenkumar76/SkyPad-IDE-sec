@@ -24,7 +24,6 @@ import ContestCreation from './components/ContestCreation';
 import JoinContest from './components/JoinContest';
 import ContestInterface from './components/ContestInterface';
 import ContestLeaderboard from './components/ContestLeaderboard';
-import Contests from './components/Contests';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthCallback from './components/AuthCallback';
 import './App.css';

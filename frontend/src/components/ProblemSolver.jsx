@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import Editor from '@monaco-editor/react';
 import { 
   MdArrowBack, 
   MdPlayArrow, 
@@ -29,6 +30,7 @@ const ProblemSolver = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('testcases'); // 'testcases' or 'output'
+  const editorRef = useRef(null);
 
   const languages = [
     { value: 'JavaScript', label: 'JavaScript', extension: 'js' },
@@ -391,14 +393,14 @@ const ProblemSolver = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <h4 className="text-sm font-medium text-gray-400 mb-2">Input:</h4>
-                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border border-white/10">
-                          {testCase.input}
+                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border border-white/10 whitespace-pre-wrap">
+                          {testCase.input || testCase.stdin || '(No input)'}
                         </pre>
                       </div>
                       <div>
                         <h4 className="text-sm font-medium text-gray-400 mb-2">Expected Output:</h4>
-                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border border-white/10">
-                          {testCase.expectedOutput}
+                        <pre className="text-gray-300 text-sm bg-black/30 p-3 rounded border border-white/10 whitespace-pre-wrap">
+                          {testCase.expectedOutput || testCase.output || testCase.stdout || '(No output)'}
                         </pre>
                       </div>
                     </div>
@@ -451,13 +453,39 @@ const ProblemSolver = () => {
                   </div>
                 </div>
 
-                <div className="flex-1 p-4 overflow-hidden">
-                  <textarea
+                <div className="flex-1 overflow-hidden">
+                  <Editor
+                    height="100%"
+                    language={selectedLanguage.toLowerCase() === 'c++' ? 'cpp' : selectedLanguage.toLowerCase()}
                     value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    className="w-full h-full bg-black/30 text-white font-mono text-sm p-4 rounded-lg border border-white/20 focus:outline-none focus:border-violet-400 resize-none"
-                    placeholder={`Write your ${selectedLanguage} solution here...`}
-                    spellCheck={false}
+                    onChange={(value) => setCode(value || '')}
+                    onMount={(editor) => {
+                      editorRef.current = editor;
+                    }}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      lineNumbers: 'on',
+                      roundedSelection: true,
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      tabSize: 2,
+                      wordWrap: 'on',
+                      autoClosingBrackets: 'always',
+                      autoClosingQuotes: 'always',
+                      formatOnPaste: true,
+                      formatOnType: true,
+                      suggestOnTriggerCharacters: true,
+                      acceptSuggestionOnEnter: 'on',
+                      quickSuggestions: true,
+                      parameterHints: { enabled: true },
+                      folding: true,
+                      bracketPairColorization: { enabled: true },
+                      renderLineHighlight: 'all',
+                      cursorBlinking: 'smooth',
+                      smoothScrolling: true,
+                    }}
                   />
                 </div>
               </div>
@@ -511,14 +539,14 @@ const ProblemSolver = () => {
                           <div className="space-y-2">
                             <div>
                               <span className="text-xs text-gray-500">Input:</span>
-                              <pre className="text-gray-300 text-xs bg-black/30 p-2 rounded mt-1">
-                                {testCase.input}
+                              <pre className="text-gray-300 text-xs bg-black/30 p-2 rounded mt-1 whitespace-pre-wrap">
+                                {testCase.input || testCase.stdin || '(No input)'}
                               </pre>
                             </div>
                             <div>
                               <span className="text-xs text-gray-500">Expected Output:</span>
-                              <pre className="text-gray-300 text-xs bg-black/30 p-2 rounded mt-1">
-                                {testCase.expectedOutput}
+                              <pre className="text-gray-300 text-xs bg-black/30 p-2 rounded mt-1 whitespace-pre-wrap">
+                                {testCase.expectedOutput || testCase.output || testCase.stdout || '(No output)'}
                               </pre>
                             </div>
                           </div>

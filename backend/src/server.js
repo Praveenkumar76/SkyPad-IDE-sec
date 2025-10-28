@@ -1,18 +1,23 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const path = require('path');
-const http = require('http');
-const { spawn } = require('child_process');
+import { express } from "express";
+import {cors} from "cors";
+import {helmet} from "helmet";
+import {morgan} from "morgan";
+import { path } from "path";
+import {http} from "http";
+import {spawn} from "child_process";
+import {connectToDatabase} from "./db/mongoose";
+import {initializeSocketServer} from "./socketServer";
+import {authRouter} from "./routes/auth";
+import {usersRouter} from "./routes/users";
+import {problemsRouter} from "./routes/problem";
+import {challengesRouter} from "./routes/challenges";
+import {contestsRouter} from "./routes/contests";
+import {rewardsRouter} from "./routes/rewards";
+import {password} from "./config/passport";
+
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
-const { connectToDatabase } = require('./db/mongoose');
-const { initializeSocketServer } = require('./socketServer');
-
 // Initialize Passport
-const passport = require('./config/passport');
-
 const app = express();
 const httpServer = http.createServer(app);
 
@@ -56,12 +61,6 @@ app.use(passport.initialize());
 // Note: We don't use passport.session() because we're using JWT tokens instead of sessions
 
 // Routers
-const authRouter = require('./routes/auth');
-const usersRouter = require('./routes/users');
-const problemsRouter = require('./routes/problem');
-const challengesRouter = require('./routes/challenges');
-const contestsRouter = require('./routes/contests');
-const rewardsRouter = require('./routes/rewards');
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/problems', problemsRouter);

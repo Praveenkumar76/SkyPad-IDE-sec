@@ -507,11 +507,11 @@ const CodeDuelIDE = () => {
                       <div key={index} className="example">
                         <div className="example-item">
                           <strong>Input:</strong>
-                          <pre>{example.input}</pre>
+                          <pre>{example.input || example.stdin || '(No input)'}</pre>
                         </div>
                         <div className="example-item">
                           <strong>Output:</strong>
-                          <pre>{example.expectedOutput || example.output}</pre>
+                          <pre>{example.expectedOutput || example.output || example.stdout || '(No output)'}</pre>
                         </div>
                         {example.explanation && (
                           <div className="example-item">
@@ -596,8 +596,30 @@ const CodeDuelIDE = () => {
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
+                lineNumbers: 'on',
+                roundedSelection: true,
                 scrollBeyondLastLine: false,
                 automaticLayout: true,
+                tabSize: 2,
+                wordWrap: 'on',
+                autoClosingBrackets: 'always',
+                autoClosingQuotes: 'always',
+                autoClosingOvertype: 'always',
+                autoSurround: 'languageDefined',
+                formatOnPaste: true,
+                formatOnType: true,
+                suggestOnTriggerCharacters: true,
+                acceptSuggestionOnEnter: 'on',
+                quickSuggestions: true,
+                parameterHints: { enabled: true },
+                folding: true,
+                bracketPairColorization: { enabled: true },
+                renderLineHighlight: 'all',
+                cursorBlinking: 'smooth',
+                smoothScrolling: true,
+                matchBrackets: 'always',
+                occurrencesHighlight: true,
+                selectionHighlight: true,
               }}
             />
           </div>

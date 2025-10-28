@@ -1,7 +1,7 @@
-const { Server } = require('socket.io');
-const jwt = require('jsonwebtoken');
-const mongoose = require('mongoose');
-const ChallengeRoom = require('./models/ChallengeRoom');
+import {server} from "socket.io";
+import {jwt} from "jsonwebtoken";
+import {mongoose} from "mongoose";
+import {challengeRoom} from "./models/ChallengeRoom";
 
 let io;
 const roomTimers = new Map(); // Store room timers

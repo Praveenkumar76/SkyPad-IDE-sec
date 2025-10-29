@@ -1,15 +1,15 @@
-import {express} from "express";
-import {contest} from "../models/Contest";
-import {ContestRegistration} from "../models/ContestRegistration";
-import {ContestSubmission} from "../models/ContestSubmission";
-import {Problem} from "../models/Problem";
-import {authenticateToken} from "../middleware/auth";
-import {broadcastLeaderboardUpdate} from "../socketServer";
+import express from "express";
+import Contest from "../models/Contest.js";
+import ContestRegistration from "../models/ContestRegistration.js";
+import ContestSubmission from "../models/ContestSubmission.js";
+import Problem from "../models/Problem.js";
+import authenticateToken from "../middleware/auth.js";
+import {broadcastLeaderboardUpdate} from "../socketServer.js";
 import {mongoose} from "mongoose";
 import {spawn} from "child_process";
-import {fs} from "fs";
-import {os} from "os";
-import {path} from "path";
+import fs from "fs";
+import os from "os";
+import path from "path";
 
 const router = express.Router();
 
@@ -803,4 +803,4 @@ async function executeCode(code, language, testCases) {
   return results;
 }
 
-module.exports = router;
+export default router;

@@ -107,5 +107,8 @@ challengeRoomSchema.methods.areBothReady = function() {
   return this.hostReady && this.opponentReady && this.isFull();
 };
 
-module.exports = mongoose.models.ChallengeRoom || mongoose.model('ChallengeRoom', challengeRoomSchema);
+const ChallengeRoom =
+  mongoose.models.ChallengeRoom ||
+  mongoose.model("ChallengeRoom", challengeRoomSchema);
 
+export default ChallengeRoom;

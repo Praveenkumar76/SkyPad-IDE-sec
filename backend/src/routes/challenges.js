@@ -1,9 +1,9 @@
 import express from "express";
 import ChallengeRoom from "../models/ChallengeRoom.js";
 import Problem from "../models/Problem.js";
-import { authenticateToken } from "../middleware/auth.js";
+import authenticateToken from "../middleware/auth.js";
 import { setLobbyTimer, notifyMatchFinished } from "../socketServer.js";
-import User from "../models/User";
+import User from "../models/User.js";
 import { mongoose } from "mongoose";
 
 const router = express.Router();
@@ -898,5 +898,5 @@ async function awardTieRewards(room, problemData) {
 }
 
 // Export additional functions for socket server
-module.exports = router;
-module.exports.checkAndDetermineWinner = checkAndDetermineWinner;
+export { checkAndDetermineWinner };
+export default router;

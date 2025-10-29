@@ -268,7 +268,16 @@ const ContestCreation = () => {
         visibility: formData.visibility,
         questions: processedQuestions,
         timeSlots: formData.timeSlots,
-        allowedLanguages: formData.allowedLanguages.map(lang => lang.toLowerCase()),
+        allowedLanguages: formData.allowedLanguages.map(lang => {
+          const lowerLang = lang.toLowerCase();
+          // Map frontend language names to backend enum values
+          if (lowerLang === 'c++') return 'cpp';
+          if (lowerLang === 'javascript') return 'javascript';
+          if (lowerLang === 'python') return 'python';
+          if (lowerLang === 'java') return 'java';
+          if (lowerLang === 'c') return 'c';
+          return lowerLang;
+        }),
         maxParticipants: formData.maxParticipants ? parseInt(formData.maxParticipants) : null
       };
 

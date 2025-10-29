@@ -1,10 +1,10 @@
-import { express } from "express";
-import { bcrypt } from "bcryptjs";
-import { jwt } from "jsonwebtoken";
-import { User } from "../models/User";
-import { LoginLog } from "../models/LoginLog";
+import express from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
+import LoginLog from "../models/LoginLog.js";
 import { OAuth2Client } from "google-auth-library";
-import { passport } from "../config/passport";
+import passport from "../config/passport.js";
 import { mongoose } from "mongoose";
 const router = express.Router();
 
@@ -12,9 +12,6 @@ function createToken(payload) {
   const secret = process.env.JWT_SECRET || "dev-secret-change-me";
   return jwt.sign(payload, secret, { expiresIn: "7d" });
 }
-
-const googleClientId = process.env.GOOGLE_CLIENT_ID || "";
-const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
 
 router.post("/register", async (req, res) => {
   try {
@@ -28,7 +25,6 @@ router.post("/register", async (req, res) => {
     }
 
     // Check if database is connected
-    const mongoose = require("mongoose");
     if (mongoose.connection.readyState !== 1) {
       // Mock registration for development when database is not available
       console.log("Database not available, using mock registration");
@@ -174,6 +170,8 @@ router.post("/login", async (req, res) => {
 // POST /api/auth/google - Exchange Google ID token for app JWT
 router.post("/google", async (req, res) => {
   try {
+    const googleClientId = process.env.GOOGLE_CLIENT_ID || "";
+    const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
     const { idToken } = req.body || {};
     if (!idToken) {
       return res.status(400).json({ message: "idToken is required" });
@@ -328,4 +326,4 @@ router.get(
   }
 );
 
-module.exports = router;
+export default router;

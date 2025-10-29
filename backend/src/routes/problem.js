@@ -1,16 +1,19 @@
-import {express} from "express";
-import {spawnSync} from "child_process";
-import {fs} from "fs";
-import {path} from "path";
-import {crypto} from "crypto";
-import {problem} from "../models/Problem";
-import { authenticateToken } from "../middleware/auth";
-import {mongoose} from "mongoose";
+import express from "express";
+import dotenv from "dotenv";
+import { spawnSync } from "child_process";
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
+import { fileURLToPath } from "url";  // ✅ Add this
+import Problem from "../models/Problem.js";
+import authenticateToken from "../middleware/auth.js";
+import { mongoose } from "mongoose";
+     // ✅ Add this
 
 const router = express.Router();
-
+const TEMP_DIR = path.join(process.cwd(), "temp");
 // Create temp directory for code execution
-const TEMP_DIR = path.join(__dirname, '..', '..', 'temp_code');
+dotenv.config({ path: path.resolve(process.cwd(), '..', '.env') });
 if (!fs.existsSync(TEMP_DIR)) {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
 }
@@ -470,4 +473,4 @@ router.post('/run', authenticateToken, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

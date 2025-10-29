@@ -1,6 +1,6 @@
 import express from "express";
 import User from "../models/User.js";
-import { authenticateToken } from "../middleware/auth.js";
+import authenticateToken from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -645,4 +645,4 @@ function calculateLevel(xp, coins) {
   return Math.floor(totalProgressPoints / 1000) + 1;
 }
 
-module.exports = router;
+export default router;

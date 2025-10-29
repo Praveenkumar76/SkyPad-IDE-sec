@@ -1,7 +1,7 @@
-import {express} from "express";
-import {User} from "../models/User";
-import {Problem} from "../models/Problem";
-import { authenticateToken } from "../middleware/auth";
+import express from "express";
+import User from "../models/User.js";
+import Problem  from "../models/Problem.js";
+import authenticateToken from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -747,4 +747,4 @@ function getBadgeReward(rarity) {
   return rewards[rarity] || 25;
 }
 
-module.exports = router;
+export default router;

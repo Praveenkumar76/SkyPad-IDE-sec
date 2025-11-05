@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { MdPlayArrow, MdSettings, MdCode, MdLanguage, MdDownload, MdFileCopy } from 'react-icons/md';
-import io from 'socket.io-client';
+import { codeAPI } from '../utils/api';
 
 const languageTemplates = {
   javascript: '// JavaScript code here\nconsole.log("Hello, World!");',
@@ -26,49 +26,29 @@ const CodeEditor = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [fontSize, setFontSize] = useState(16);
   const [theme, setTheme] = useState('vs-dark');
-  const [socket, setSocket] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [userInput, setUserInput] = useState('');
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [currentInput, setCurrentInput] = useState('');
 
   const handleLanguageChange = (newLanguage) => {
     setLanguage(newLanguage);
     const newCode = languageTemplates[newLanguage];
     setCode(newCode);
-    if (socket && isConnected) {
-      socket.emit('language-change', { language: newLanguage });
-    }
   };
 
-  const handleRunCode = () => {
-    if (!isConnected) {
-      setOutput('Error: Not connected to backend. Please start the code editor server.');
-      return;
-    }
-    
+  const handleRunCode = async () => {
     setIsRunning(true);
-    setIsExecuting(true);
     setOutput('');  // Clear previous output
-    setCurrentInput('');
     
-    if (socket) {
-      socket.emit('run-code', { code, language });
-    }
-  };
-  
-  const handleSendInput = () => {
-    if (socket && isExecuting && currentInput) {
-      socket.emit('send-input', { input: currentInput });
-      setOutput(prev => prev + currentInput + '\n');
-      setCurrentInput('');
-    }
-  };
-  
-  const handleInputKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendInput();
+    try {
+      const result = await codeAPI.executeCode(code, language);
+      
+      if (result.success) {
+        setOutput(result.output || 'Code executed successfully!');
+      } else {
+        setOutput(`Error: ${result.output || 'Execution failed'}`);
+      }
+    } catch (error) {
+      setOutput(`Error: ${error.message || 'Failed to execute code. Please check your connection.'}`);
+    } finally {
+      setIsRunning(false);
     }
   };
 
@@ -89,84 +69,6 @@ const CodeEditor = () => {
     URL.revokeObjectURL(url);
   };
 
-  // WebSocket connection setup
-  useEffect(() => {
-    // Connect to the dedicated code editor server (port 4000)
-    // NOT the main API server (port 5000)
-    const CODE_EDITOR_URL = import.meta.env.VITE_CODE_EDITOR_URL || 'http://localhost:4000';
-    const newSocket = io(CODE_EDITOR_URL);
-    
-    newSocket.on('connect', () => {
-      console.log('✅ Connected to Code Editor server');
-      setIsConnected(true);
-      setOutput('✅ Connected to code execution server!\n\nReady to run code in multiple languages.');
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('❌ Disconnected from Code Editor server');
-      setIsConnected(false);
-      setOutput('❌ Disconnected from server.\n\nPlease make sure the code editor server is running:\nnpm run code-editor');
-    });
-
-    // Handle streaming output from interactive execution
-    newSocket.on('code-output', (data) => {
-      setOutput(prev => prev + data.data);
-    });
-    
-    // Handle execution finished
-    newSocket.on('code-finished', (result) => {
-      setIsRunning(false);
-      setIsExecuting(false);
-      
-      if (result.stopped) {
-        setOutput(prev => prev + '\n\n⚠️ Execution stopped by user.');
-      } else if (result.success) {
-        setOutput(prev => prev + '\n\n✅ Program finished successfully.');
-      } else if (result.error) {
-        setOutput(prev => prev + '\n\n❌ Error: ' + result.error);
-      } else if (result.exitCode !== 0) {
-        setOutput(prev => prev + `\n\n❌ Program exited with code ${result.exitCode}`);
-      }
-    });
-    
-    // Handle non-interactive execution result (for JavaScript, etc.)
-    newSocket.on('run-result', (result) => {
-      setIsRunning(false);
-      setIsExecuting(false);
-      if (result.success) {
-        setOutput(`✅ Execution successful!\n\nOutput:\n${result.output}`);
-      } else {
-        setOutput(`❌ Execution failed!\n\nError:\n${result.output}`);
-      }
-    });
-
-    newSocket.on('initial-code', (initialData) => {
-      if (initialData.code && initialData.language) {
-        setCode(initialData.code);
-        setLanguage(initialData.language);
-      }
-    });
-
-    newSocket.on('code-update', (data) => {
-      if (data.code !== code) {
-        setCode(data.code);
-        setLanguage(data.language);
-      }
-    });
-
-    setSocket(newSocket);
-
-    return () => {
-      newSocket.close();
-    };
-  }, []);
-
-  // Emit code changes to other connected users
-  useEffect(() => {
-    if (socket && isConnected) {
-      socket.emit('code-change', { code, language });
-    }
-  }, [code, socket, isConnected]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-violet-900/30 to-black relative overflow-hidden">
@@ -187,17 +89,11 @@ const CodeEditor = () => {
                 <h1 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400 text-3xl font-bold">
                   SkyPad Code Editor
                 </h1>
-                <p className="text-gray-300">Write, run, and collaborate on code</p>
+                <p className="text-gray-300">Write and run code in multiple languages</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                <span className={`text-sm ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-                  {isConnected ? 'Connected' : 'Disconnected'}
-                </span>
-              </div>
               <button
                 onClick={() => setShowSettings(!showSettings)}
                 className="bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-300 px-4 py-2 rounded-lg border border-violet-500/30 hover:from-violet-500/30 hover:to-purple-500/30 transition-all duration-300 flex items-center space-x-2"
@@ -322,42 +218,23 @@ const CodeEditor = () => {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-purple-300 to-fuchsia-300 font-semibold">Output</h3>
                 <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span className="text-green-400 text-sm">Ready</span>
+                  <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-yellow-400' : 'bg-green-400'}`}></div>
+                  <span className={`text-sm ${isRunning ? 'text-yellow-400' : 'text-green-400'}`}>
+                    {isRunning ? 'Running...' : 'Ready'}
+                  </span>
                 </div>
               </div>
-              
-              {/* Interactive Input Section - only shown during execution */}
-              {isExecuting && (
-                <div className="mb-4">
-                  <label className="block text-violet-300 text-sm font-medium mb-2">
-                    💬 Type your input and press Enter
-                  </label>
-                  <input
-                    type="text"
-                    value={currentInput}
-                    onChange={(e) => setCurrentInput(e.target.value)}
-                    onKeyPress={handleInputKeyPress}
-                    placeholder="Type here and press Enter to send..."
-                    className="w-full bg-gray-900 text-green-400 rounded-lg p-3 border border-green-500 focus:outline-none focus:border-green-400 font-mono text-sm"
-                    autoFocus
-                  />
-                </div>
-              )}
               
               <div className="bg-gray-900 rounded-lg p-4 h-[400px] overflow-auto border border-gray-700">
                 <pre className="text-sm font-mono whitespace-pre-wrap text-gray-300">
                   {output || 'No output yet. Click "Run Code" to execute your program.'}
-                  {isExecuting && <span className="animate-pulse text-green-400">▊</span>}
+                  {isRunning && <span className="animate-pulse text-green-400">▊</span>}
                 </pre>
               </div>
               
               <div className="mt-4 text-center">
                 <div className="text-violet-400 text-sm">
-                  {isExecuting 
-                    ? '⌨️ Program is running - type input above and press Enter'
-                    : '💡 Tip: Interactive input supported for Python, C, C++, Java'
-                  }
+                  💡 Tip: Write your code and click "Run Code" to execute it
                 </div>
               </div>
             </div>

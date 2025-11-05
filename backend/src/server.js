@@ -82,6 +82,25 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Code execution endpoint (simple, no socket.io)
+app.post('/api/code/execute', async (req, res) => {
+  try {
+    const { code, language } = req.body;
+    
+    if (!code || !language) {
+      return res.status(400).json({ message: 'Code and language are required' });
+    }
+
+    // Execute code synchronously
+    const result = await executeCodeSync(code, language);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Code execution error:', error);
+    res.status(500).json({ success: false, output: error.message || 'Code execution failed' });
+  }
+});
+
 // Root route (avoid 404 when visiting http://localhost:5000)
 app.get('/', (_req, res) => {
   res.type('text').send('SkyPad-IDE API is running');
@@ -299,6 +318,78 @@ async function executeCodeSync(code, language) {
           } catch (error) {
             resolve({ success: false, output: error.message });
           }
+        });
+
+      case 'python':
+        filePath = await createTempFile(code, '.py');
+        return new Promise((resolve) => {
+          exec(`python ${filePath}`, { timeout: 10000 }, async (error, stdout, stderr) => {
+            await deleteTempFile(filePath);
+            if (error) {
+              resolve({ success: false, output: stderr || error.message });
+            } else {
+              resolve({ success: true, output: stdout || 'Code executed successfully!' });
+            }
+          });
+        });
+
+      case 'cpp':
+        filePath = await createTempFile(code, '.cpp');
+        const executablePath = path.join(os.tmpdir(), `temp_program_${Date.now()}`);
+        return new Promise((resolve) => {
+          exec(`g++ ${filePath} -o ${executablePath} && ${executablePath}`, { timeout: 10000 }, async (error, stdout, stderr) => {
+            await deleteTempFile(filePath);
+            try {
+              await fs.unlink(executablePath);
+            } catch (e) {}
+            if (error) {
+              resolve({ success: false, output: stderr || error.message });
+            } else {
+              resolve({ success: true, output: stdout || 'Code executed successfully!' });
+            }
+          });
+        });
+
+      case 'java':
+        const className = 'Main';
+        const javaDir = path.join(os.tmpdir(), 'temp');
+        try {
+          await fs.mkdir(javaDir, { recursive: true });
+        } catch (err) {}
+        
+        filePath = path.join(javaDir, 'Main.java');
+        await fs.writeFile(filePath, code);
+        
+        return new Promise((resolve) => {
+          exec(`javac "${filePath}" && java -cp "${javaDir}" ${className}`, { timeout: 10000 }, async (error, stdout, stderr) => {
+            try {
+              await fs.unlink(filePath);
+              await fs.unlink(path.join(javaDir, 'Main.class'));
+            } catch (cleanupError) {}
+            
+            if (error) {
+              resolve({ success: false, output: stderr || error.message });
+            } else {
+              resolve({ success: true, output: stdout || 'Code executed successfully!' });
+            }
+          });
+        });
+
+      case 'c':
+        filePath = await createTempFile(code, '.c');
+        const cExecutablePath = path.join(os.tmpdir(), `temp_program_${Date.now()}`);
+        return new Promise((resolve) => {
+          exec(`gcc ${filePath} -o ${cExecutablePath} && ${cExecutablePath}`, { timeout: 10000 }, async (error, stdout, stderr) => {
+            await deleteTempFile(filePath);
+            try {
+              await fs.unlink(cExecutablePath);
+            } catch (e) {}
+            if (error) {
+              resolve({ success: false, output: stderr || error.message });
+            } else {
+              resolve({ success: true, output: stdout || 'Code executed successfully!' });
+            }
+          });
         });
         
       default:

@@ -1,5 +1,10 @@
 // Use relative path to leverage Vite proxy
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api';
+const RAW_BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const API_BASE_URL = RAW_BACKEND_URL
+  ? (RAW_BACKEND_URL.trim().replace(/\/$/, '').endsWith('/api')
+      ? RAW_BACKEND_URL.trim().replace(/\/$/, '')
+      : `${RAW_BACKEND_URL.trim().replace(/\/$/, '')}/api`)
+  : '/api';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -291,6 +296,31 @@ export const rewardsAPI = {
       });
       
       return await parseResponse(response, 'Fetch leaderboard');
+    } catch (error) {
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('Network error when trying to reach backend:', error);
+        throw new Error(
+          `Cannot connect to backend server. ` +
+          `Please check if the backend is running at ${API_BASE_URL}`
+        );
+      }
+      throw error;
+    }
+  }
+};
+
+export const codeAPI = {
+  executeCode: async (code, language) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/code/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code, language }),
+      });
+      
+      return await parseResponse(response, 'Code execution');
     } catch (error) {
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         console.error('Network error when trying to reach backend:', error);

@@ -1,5 +1,10 @@
 // Use relative path to leverage Vite proxy
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api';
+const RAW_BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const API_BASE_URL = RAW_BACKEND_URL
+  ? (RAW_BACKEND_URL.trim().replace(/\/$/, '').endsWith('/api')
+      ? RAW_BACKEND_URL.trim().replace(/\/$/, '')
+      : `${RAW_BACKEND_URL.trim().replace(/\/$/, '')}/api`)
+  : '/api';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {

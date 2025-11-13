@@ -4,6 +4,7 @@ import { spawnSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import os from "os";
 import { fileURLToPath } from "url";  // ✅ Add this
 import Problem from "../models/Problem.js";
 import authenticateToken from "../middleware/auth.js";
@@ -11,12 +12,7 @@ import { mongoose } from "mongoose";
      // ✅ Add this
 
 const router = express.Router();
-const TEMP_DIR = path.join(process.cwd(), "temp");
-// Create temp directory for code execution
 dotenv.config({ path: path.resolve(process.cwd(), '..', '.env') });
-if (!fs.existsSync(TEMP_DIR)) {
-  fs.mkdirSync(TEMP_DIR, { recursive: true });
-}
 
 // GET /api/problems - Get all problems (public)
 router.get('/', async (req, res) => {
@@ -278,6 +274,8 @@ const executeInterpreted = (language, code, input, timeLimit) => {
 // Execute compiled languages (C, C++, Java)
 const executeCompiled = (language, code, input, timeLimit) => {
   const uuid = crypto.randomUUID();
+  // Create a unique temporary directory for this execution
+  const TEMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'skypad-exec-'));
   let sourceFile, compileCmd, compileArgs, executeCmd, executeArgs;
   const filesToClean = [];
   
@@ -365,6 +363,14 @@ const executeCompiled = (language, code, input, timeLimit) => {
         console.error(`Failed to delete ${file}:`, err.message);
       }
     });
+    // Clean up the temporary directory
+    try {
+      if (fs.existsSync(TEMP_DIR)) {
+        fs.rmSync(TEMP_DIR, { recursive: true, force: true });
+      }
+    } catch (err) {
+      console.error(`Failed to delete temp directory ${TEMP_DIR}:`, err.message);
+    }
   }
 };
 

@@ -1,0 +1,33 @@
+# Render deployment configuration using Docker
+# This replaces render.yaml and provides proper containerized deployment with all compilers
+
+services:
+  - type: web
+    name: skypad-backend-docker
+    env: docker
+    plan: standard  # Required for Docker and sufficient resources
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      - key: MONGODB_URI
+        fromDatabase:
+          name: skypad-mongodb
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "*"  # Update with your frontend domain
+      - key: FRONTEND_ORIGIN
+        value: https://sky-pad-ide.vercel.app  # Update with your frontend domain
+
+databases:
+  - name: skypad-mongodb
+    plan: free
+    databaseName: skypad
+

@@ -5,6 +5,7 @@ import cors from "cors";
 import { exec, spawn } from "child_process";
 import { promises as fs } from 'fs';
 import path,{ dirname } from "path";
+import os from "os";
 
 const app = express();
 const server = http.createServer(app);
@@ -56,7 +57,7 @@ const languageConfigs = {
 // Function to create a temporary file
 async function createTempFile(code, extension) {
   const fileName = `temp_${Date.now()}${extension}`;
-  const filePath = path.join(__dirname, fileName);
+  const filePath = path.join(os.tmpdir(), fileName);
   await fs.writeFile(filePath, code);
   return filePath;
 }
@@ -123,7 +124,7 @@ async function executeCodeInteractive(code, language, socket) {
       case 'c':
       case 'cpp':
         filePath = await createTempFile(code, '.cpp');
-        const executablePath = path.join(__dirname, `temp_program_${Date.now()}`);
+        const executablePath = path.join(os.tmpdir(), `temp_program_${Date.now()}`);
         return new Promise((resolve) => {
           exec(`g++ ${filePath} -o ${executablePath} && ${executablePath}`, { timeout: 10000 }, (error, stdout, stderr) => {
             deleteTempFile(filePath);
@@ -140,7 +141,7 @@ async function executeCodeInteractive(code, language, socket) {
         // Java requires the filename to match the public class name
         // Save as Main.java to avoid compilation errors
         const className = 'Main';
-        const javaDir = path.join(__dirname, 'temp');
+        const javaDir = path.join(os.tmpdir(), `temp_${Date.now()}`);
         
         // Create temp directory if it doesn't exist
         try {
@@ -159,6 +160,8 @@ async function executeCodeInteractive(code, language, socket) {
             try {
               await fs.unlink(filePath);
               await fs.unlink(path.join(javaDir, 'Main.class'));
+              // Clean up the temp directory
+              await fs.rmdir(javaDir).catch(() => {});
             } catch (cleanupError) {
               // Ignore cleanup errors
             }
@@ -173,7 +176,7 @@ async function executeCodeInteractive(code, language, socket) {
 
       case 'c':
         filePath = await createTempFile(code, '.c');
-        const cExecutablePath = path.join(__dirname, `temp_program_${Date.now()}`);
+        const cExecutablePath = path.join(os.tmpdir(), `temp_program_${Date.now()}`);
         return new Promise((resolve) => {
           exec(`gcc ${filePath} -o ${cExecutablePath} && ${cExecutablePath}`, { timeout: 10000 }, (error, stdout, stderr) => {
             deleteTempFile(filePath);
